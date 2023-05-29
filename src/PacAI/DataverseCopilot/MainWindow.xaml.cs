@@ -5,14 +5,11 @@ using bolt.dataverse.model;
 using bolt.module.ai;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.Identity.Client;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
@@ -36,7 +33,21 @@ namespace DataverseCopilot
         XmlSerializer _fetchXmlModelSerializer = new XmlSerializer(typeof(FetchXmlModel));
         Dictionary<string, GridViewColumn> _columnMap;
         GridView _gridView = new GridView();
-        ChatCompletionsOptions _openAiChat;
+        ChatCompletionsOptions _openAiChatCompletionsOptions;
+        CompletionsOptions _openAiCompletionsOptions;
+
+        const string SystemPrompt =
+            @"
+                - You are an assistant who translates language to FetchXML query against Dataverse environment
+                - You do not add extra filters, conditions and links to the query unless the user asks you to
+                - You can use any FetchXML function, operator, attribute, table, entity
+                - You avoid adding all-attributes
+                - You add only minimum number of attributes
+                - You do not provide any tips, suggestions or possible queries
+                - You can ask clarifying questions about which Dataverse table, attribute, etc. to use
+
+                User asks you to write a query which returns: 
+            ";
 
         public MainWindow()
         {
@@ -85,25 +96,24 @@ namespace DataverseCopilot
             _history.Items.Clear();
             Dispatcher.Invoke(() => _prompt.Text = string.Empty);
 
-            _openAiChat = new ChatCompletionsOptions()
+            _openAiChatCompletionsOptions = new ChatCompletionsOptions()
             {
-                Messages =
-                    {
-                        // System prompt
-                        new ChatMessage(ChatRole.System, @"
-                            - You resond with one or more FetchXML queries
-                            - You only resopond with FetchXML queries which, if executed by user, return asked results
-                            - You can use any FetchXML function, operator, attribute, table, entity
-                            - Avoid adding all-attributes 
-                            - Add minimum number of attributes which are most likely needed to produce desired results
-                            - You can ask clarifying questions about which Dataverse table, attribute, etc. to use
-                        "),
-                    },
-                Temperature = 0.7f,
-                MaxTokens = 1000,
-                NucleusSamplingFactor = 0.95f,
+                Messages = { new ChatMessage(ChatRole.System, SystemPrompt) },
+                Temperature = 0f,
+                MaxTokens = 2000,
+                NucleusSamplingFactor = 0f,
                 FrequencyPenalty = 0,
                 PresencePenalty = 0,
+            };
+            _openAiCompletionsOptions = new CompletionsOptions()
+            {
+                Prompts = { SystemPrompt },
+                Temperature = 0f,
+                MaxTokens = 2000,
+                NucleusSamplingFactor = 0f,
+                FrequencyPenalty = 0,
+                PresencePenalty = 0,
+                LogProbabilityCount = 20,
             };
 
             Dispatcher.Invoke(() => _statusBarText.Text = $"Ready to chat with OpenAI");
@@ -278,18 +288,33 @@ namespace DataverseCopilot
             if (OpenAIClient == null)
                 return null;
 
-            _openAiChat.Messages.Add(new ChatMessage(ChatRole.User, _prompt.Text));
+            if (_options.Value.UseCompletionAPI)
+                _openAiCompletionsOptions.Prompts[0] += Environment.NewLine + _prompt.Text;
+            else
+                _openAiChatCompletionsOptions.Messages.Add(new ChatMessage(ChatRole.User, _prompt.Text));
+
             _history.Items.Add(_prompt.Text);
             Dispatcher.Invoke(() => _prompt.Text = string.Empty);
 
             Dispatcher.Invoke(() => _statusBarText.Text = $"Waiting for OpenAI's response");
 
-            var responseWithoutStream = await OpenAIClient.GetChatCompletionsAsync(
-                _options.Value.OpenApiModel, _openAiChat).ConfigureAwait(false);
+            string? openAiResponseContent = null;
+            if (_options.Value.UseCompletionAPI)
+            {
+                var openAiResponse = await OpenAIClient.GetCompletionsAsync(
+                                   _options.Value.OpenApiModel, _openAiCompletionsOptions).ConfigureAwait(false);
+                if (openAiResponse != null && openAiResponse.Value != null && openAiResponse.Value.Choices != null && openAiResponse.Value.Choices.Count > 0)
+                    openAiResponseContent = openAiResponse.Value.Choices[0].Text;
+            }
+            else
+            {
+                var openAiResponse = await OpenAIClient.GetChatCompletionsAsync(
+                    _options.Value.OpenApiModel, _openAiChatCompletionsOptions).ConfigureAwait(false);
+                if (openAiResponse != null && openAiResponse.Value != null && openAiResponse.Value.Choices != null && openAiResponse.Value.Choices.Count > 0)
+                    openAiResponseContent = openAiResponse.Value.Choices[0].Message.Content;
+            }
 
-            var completions = responseWithoutStream.Value;
-
-            if (completions.Choices == null || completions.Choices.Count <= 0)
+            if (string.IsNullOrWhiteSpace(openAiResponseContent))
             {
                 Dispatcher.Invoke(
                     () => MessageBox.Show(this, "No completions returned from the OpenAI service", "No Response", MessageBoxButton.OK, MessageBoxImage.Error)
@@ -297,22 +322,22 @@ namespace DataverseCopilot
                 return null;
             }
 
-            Debug.WriteLine(completions.Choices[0].Message.Content);
-            _openAiChat.Messages.Add(new ChatMessage(ChatRole.Assistant, completions.Choices[0].Message.Content));
+            Debug.WriteLine(openAiResponseContent);
+            _openAiChatCompletionsOptions.Messages.Add(new ChatMessage(ChatRole.Assistant, openAiResponseContent));
 
-            var fetchStart = completions.Choices[0].Message.Content.IndexOf("<fetch", StringComparison.OrdinalIgnoreCase);
-            var fetchEnd = completions.Choices[0].Message.Content.IndexOf("</fetch>", StringComparison.OrdinalIgnoreCase);
+            var fetchStart = openAiResponseContent.IndexOf("<fetch", StringComparison.OrdinalIgnoreCase);
+            var fetchEnd = openAiResponseContent.IndexOf("</fetch>", StringComparison.OrdinalIgnoreCase);
             if (fetchStart < 0 || fetchEnd < 0)
             {
                 Dispatcher.Invoke(
-                    () => MessageBox.Show(this, completions.Choices[0].Message.Content, "AI Resonse", 
+                    () => MessageBox.Show(this, openAiResponseContent, "AI Resonse", 
                     MessageBoxButton.OK, MessageBoxImage.Question)
                 );
                 return null;
             }
 
             // Read fetchxml
-            var fetchXmlFromOpenAI = completions.Choices[0].Message.Content.Substring(fetchStart, fetchEnd - fetchStart + "</fetch>".Length);
+            var fetchXmlFromOpenAI = openAiResponseContent.Substring(fetchStart, fetchEnd - fetchStart + "</fetch>".Length);
             var readerSettings = new XmlReaderSettings() { IgnoreComments = true, IgnoreProcessingInstructions = true, IgnoreWhitespace = true };
             using var fileReader = new StringReader(fetchXmlFromOpenAI);
             using var xmlReader = XmlReader.Create(fileReader, readerSettings);
