@@ -46,7 +46,7 @@ namespace DataverseCopilot
                 - You do not provide any tips, suggestions or possible queries
                 - You can ask clarifying questions about which Dataverse table, attribute, etc. to use
 
-                User asks you to write a query which returns: 
+                Write a query which returns: 
             ";
 
         public MainWindow()
@@ -289,7 +289,8 @@ namespace DataverseCopilot
                 return null;
 
             if (_options.Value.UseCompletionAPI)
-                _openAiCompletionsOptions.Prompts[0] += Environment.NewLine + _prompt.Text;
+                // Important to add '.' at the end of the prompt to make sure the AI doesn't try to complete the query with suggestions
+                _openAiCompletionsOptions.Prompts[0] += $"{Environment.NewLine}{_prompt.Text}.{Environment.NewLine}";
             else
                 _openAiChatCompletionsOptions.Messages.Add(new ChatMessage(ChatRole.User, _prompt.Text));
 
