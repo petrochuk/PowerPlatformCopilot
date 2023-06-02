@@ -48,6 +48,8 @@ namespace DataverseCopilot
 
                 Write a query which returns: 
             ";
+        const string ReadyInitialMessage = $"Ready to chat with OpenAI";
+        const string ReadyMessage = $"Ready";
 
         public MainWindow()
         {
@@ -116,7 +118,7 @@ namespace DataverseCopilot
                 LogProbabilityCount = 20,
             };
 
-            Dispatcher.Invoke(() => _statusBarText.Text = $"Ready to chat with OpenAI");
+            Dispatcher.Invoke(() => _statusBarText.Text = ReadyInitialMessage);
         }
 
         private async void Submit_Click(object sender, RoutedEventArgs e)
@@ -141,6 +143,7 @@ namespace DataverseCopilot
                     Dispatcher.Invoke(
                         () => MessageBox.Show(this, "Failed to clean FetchXml", "Internal error", MessageBoxButton.OK, MessageBoxImage.Error)
                     );
+                    Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
                     return;
                 }
 
@@ -170,6 +173,7 @@ namespace DataverseCopilot
                     Dispatcher.Invoke(
                         () => MessageBox.Show(this, $"Failed to read data {result.StatusCode}", "Internal error", MessageBoxButton.OK, MessageBoxImage.Error)
                     );
+                    Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
                     return;
                 }
                 var resultContent = await result.Content.ReadAsStringAsync();
@@ -180,12 +184,13 @@ namespace DataverseCopilot
                     Dispatcher.Invoke(
                         () => MessageBox.Show(this, $"No results", "No results", MessageBoxButton.OK, MessageBoxImage.Information)
                     );
+                    Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
                     return;
                 }
 
                 PopulateDataGrid(responseData, cleanFetchXmlModel.Entity.Name, cleanFetchXmlModel);
 
-                Dispatcher.Invoke(() => _statusBarText.Text = $"Ready");
+                Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
             }
             catch (Exception ex)
             {
@@ -334,6 +339,7 @@ namespace DataverseCopilot
                     () => MessageBox.Show(this, openAiResponseContent, "AI Resonse", 
                     MessageBoxButton.OK, MessageBoxImage.Question)
                 );
+                Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
                 return null;
             }
 
