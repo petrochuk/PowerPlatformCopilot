@@ -42,6 +42,7 @@ namespace DataverseCopilot
         private static void ConfigureServices(IServiceCollection services)
         {
             var config = LoadConfiguration();
+            var pacAppSettings = config.GetSection(nameof(PacAppSettings)).Get<PacAppSettings>();
 
             services.AddOptions<PacAppSettings>().Bind(config.GetSection(nameof(PacAppSettings)));
             services.AddSingleton<ILocalizedStrings<LocString>>(_ => new LocalizedStrings<LocString>(CultureInfo.CurrentUICulture, "loc"));
@@ -68,8 +69,8 @@ namespace DataverseCopilot
             services.AddLazyServiceResolution();
 
             services.AddSingleton(new ClientApplicationConfiguration(
-                clientId: new Guid("9cee029c-6210-4654-90bb-17e6e9d36617"),
-                new Uri("app://9cee029c-6210-4654-90bb-17e6e9d36617")));
+                clientId: new Guid(pacAppSettings?.AzureAppId!),
+                new Uri($"app://{pacAppSettings?.AzureAppId}")));
 
             services.AddHttpClient(DataverseConstants.HttpClientName, (client) =>
             {
