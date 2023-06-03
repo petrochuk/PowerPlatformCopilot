@@ -1,11 +1,7 @@
-﻿using System.Collections.Generic;
+﻿namespace DataverseCopilot;
 
-namespace DataverseCopilot
+public class ODataResponse<T>
 {
-
-    public class ODataResponse
-    {
-        public List<Dictionary<string, object>> value { get; set; }
-    }
+    public List<T> value { get; set; }
 }
 
