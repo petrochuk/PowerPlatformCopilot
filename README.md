@@ -18,6 +18,12 @@ Endpoints can be configured in the `appSettings.json` file.
 
 ![Custom Table](media/custom_table.gif)
 
+### Export to Excel
+
+Ask Copilot to query data from Dataverse and export it to Excel
+
+![Custom Table](media/AI-to-excel.png)
+
 ### Functional flow block diagram
 
 1. User types query in natural language for example: "show me all accounts"	

@@ -46,6 +46,24 @@ public class DynamicRow : DynamicObject
         }
     }
 
+    public object? Get(string key)
+    {
+        if (!key.Contains('.'))
+        {
+            if (!_items.TryGetValue(key, out var resultItem))
+                return null;
+
+            return resultItem;
+        }
+
+        var nestedKey = key.Substring(0, key.IndexOf('.'));
+        var nestedName = key.Substring(key.IndexOf('.') + 1);
+        if (!_nestedItems.TryGetValue(nestedKey, out var nestedItem))
+            return null;
+
+        return nestedItem.Get(nestedName);
+    }
+
     public int Count
     {
         get => _items.Count;

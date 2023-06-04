@@ -3,9 +3,12 @@ using Azure.AI.OpenAI;
 using bolt.cli;
 using bolt.dataverse.model;
 using bolt.module.ai;
+using CsvHelper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Win32;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -46,6 +49,7 @@ public partial class MainWindow : Window
                 - You do not provide any tips, suggestions or possible queries
                 - You can ask clarifying questions about which Dataverse table, attribute, etc. to use
         ";
+    const string TablesPromptPrefix = "User has following tables in addition to many others: ";
     const string UserPromptPrefix = "Write a query which returns: ";
     const string ReadyInitialMessage = $"Ready to chat with OpenAI";
     const string ReadyMessage = $"Ready";
@@ -309,7 +313,8 @@ public partial class MainWindow : Window
         if (_options.Value.UseCompletionAPI)
         {
             var completionPrompt = new StringBuilder();
-            completionPrompt.Append(SystemPrompt);
+            completionPrompt.AppendLine(SystemPrompt);
+            completionPrompt.AppendLine(TablesPromptPrefix);
             foreach (var metadataEmbedding in metadataEmbeddings)
             {
                 completionPrompt.Append(metadataEmbedding.Prompt);
@@ -323,6 +328,7 @@ public partial class MainWindow : Window
         {
             _openAiChatCompletionsOptions!.Messages.Clear();
             _openAiChatCompletionsOptions!.Messages.Add(new ChatMessage(ChatRole.Assistant, SystemPrompt));
+            _openAiChatCompletionsOptions!.Messages.Add(new ChatMessage(ChatRole.Assistant, TablesPromptPrefix));
             foreach (var metadataEmbedding in metadataEmbeddings)
             {
                 _openAiChatCompletionsOptions!.Messages.Add(new ChatMessage(ChatRole.Assistant, metadataEmbedding.Prompt));
@@ -402,6 +408,33 @@ public partial class MainWindow : Window
         if (e.Key == Key.Return)
         {
             Submit_Click(sender, e);
+        }
+    }
+
+    private void SaveAsExcel_Click(object sender, RoutedEventArgs e)
+    {
+        // Open file dialog
+        var saveFileDialog = new SaveFileDialog()
+        {
+            Filter = "CSV File (*.csv)|*.csv",
+            Title = "Save as CSV file",
+            FileName = "Results.csv",
+        };
+
+        if (saveFileDialog.ShowDialog() == true)
+        {
+            // Save file
+            using var streamWriter = new StreamWriter(saveFileDialog.FileName);
+            using var csvWriter = new CsvWriter(streamWriter, CultureInfo.InvariantCulture);
+            _gridView.Columns.ToList().ForEach(c => csvWriter.WriteField(c.Header));
+            foreach (var row in _listView.Items.Cast<DynamicRow>())
+            {
+                csvWriter.NextRecord();
+                foreach (var column in _gridView.Columns)
+                {
+                    csvWriter.WriteField(row.Get(((Binding)column.DisplayMemberBinding).Path.Path));
+                }
+            }
         }
     }
 }

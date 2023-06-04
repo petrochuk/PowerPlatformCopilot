@@ -27,6 +27,11 @@
         </DataTemplate>
     </Window.Resources>
     <DockPanel LastChildFill="True">
+        <ToolBar DockPanel.Dock="Top" Background="#F6E4F6">
+            <Button x:Name="_saveAsExcel" Focusable="False" ToolTip="Save As Excel" Click="SaveAsExcel_Click" >
+                <Image Source="Images/Microsoft_Office_Excel.svg" Width="32" Height="32" />
+            </Button>
+        </ToolBar>
         <StatusBar DockPanel.Dock="Bottom" x:Name="_statusBar" Height="25" FontSize="12" Background="#F6E4F6">
             <StatusBarItem>
                 <TextBlock x:Name="_statusBarText">Ready</TextBlock>

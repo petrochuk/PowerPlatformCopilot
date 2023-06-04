@@ -10,10 +10,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Images\Microsoft_Office_Excel.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="PPDevTools.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Images\Microsoft_Office_Excel.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Azure.AI.OpenAI" Version="1.0.0-beta.5" />
+    <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.4" />
