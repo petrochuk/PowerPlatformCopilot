@@ -2,13 +2,17 @@
 
 ## Dataverse Copilot Demo with PAC CLI
 
-This sample demonstrates how to create simple Dataverse Copilot with [Azure OpenAI](https://azure.microsoft.com/en-us/products/cognitive-services/openai-service)
-a litte help of Power Apps CLI library to interact with data stored in Dataverse without any need 
-to modify your Dataverse environment or send any of your proprietary data to OpenAI. 
-It uses [ChatGPT-3.5 turbo](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/how-to/chatgpt?pivots=programming-language-chat-completions)
-model to generate FetchXML queries and any regular Dataverse environment.
+This sample demonstrates how to create a simple Dataverse Copilot using [Azure OpenAI](https://azure.microsoft.com/en-us/products/cognitive-services/openai-service),
+with help of [Power Platform CLI library](https://learn.microsoft.com/en-us/power-platform/developer/cli/introduction) 
+to clean and prepare FetchXML queries, access data stored in Dataverse, plus [embeddings with Azure OpenAI](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/how-to/embeddings?tabs=console)
+to enrich prompt with table metadata.
 
-Endpoints can be configured in the `appSettings.json` file.
+There is no need to modify your Dataverse environment. It can connect to any current production Microsoft Dataverse environment.
+
+The sample can use chat or completion API with [ChatGPT-3.5 turbo or ChatGPT-4](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/how-to/chatgpt?pivots=programming-language-chat-completions)
+model.
+
+OpenAI and Dataverse endpoints can be configured in the `appSettings.json` file.
 
 ### Interact with data in Dataverse 
 
@@ -20,7 +24,7 @@ Endpoints can be configured in the `appSettings.json` file.
 
 ### Export to Excel
 
-Ask Copilot to query data from Dataverse and export it to Excel
+Ask Copilot for any data from Dataverse and export it to Excel
 
 ![Custom Table](media/AI-to-excel.png)
 
