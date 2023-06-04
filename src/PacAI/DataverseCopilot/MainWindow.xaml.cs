@@ -1,9 +1,12 @@
-﻿using Azure;
+﻿#region usings
+using Azure;
 using Azure.AI.OpenAI;
 using bolt.cli;
 using bolt.dataverse.model;
 using bolt.module.ai;
 using CsvHelper;
+using DataverseCopilot.Graph.Models;
+using DataverseCopilot.Prompt;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Win32;
@@ -19,6 +22,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Xml;
 using System.Xml.Serialization;
+#endregion
 
 namespace DataverseCopilot;
 
@@ -28,6 +32,7 @@ namespace DataverseCopilot;
 public partial class MainWindow : Window
 {
     IAuthenticatedHttpClient _authenticatedHttpClient;
+    IAuthenticatedHttpClient _graphClient;
     IAuthProfilesManager _authProfilesManager;
     AuthProfile _authProfile;
     IOptions<PacAppSettings> _options;
@@ -38,18 +43,8 @@ public partial class MainWindow : Window
     CompletionsOptions? _openAiCompletionsOptions;
     MetadataEmbeddingCollection _metadataEmbeddingCollection;
     StringBuilder _userPromptHistory;
+    PromptBuilder _promptBuilder;
 
-    const string SystemPrompt =
-        @"
-                - You are an assistant who translates language to FetchXML query against Dataverse environment
-                - You can add most commonly used columns to the query
-                - You can use any FetchXML function, operator, attribute, table, entity
-                - You do not use all-attributes
-                - You can return only one query
-                - You can ask clarifying questions about which Dataverse table, attribute, etc. to use
-        ";
-    const string TablesPromptPrefix = "User has following tables in addition to many others: ";
-    const string UserPromptPrefix = "Write a query which returns: ";
     const string ReadyInitialMessage = $"Ready to chat with OpenAI";
     const string ReadyMessage = $"Ready";
 
@@ -65,6 +60,7 @@ public partial class MainWindow : Window
         _authProfile.Resource = AuthResource.Parse(_options.Value.DataverseEnvironmentUri);
         var authenticatedClientFactory = App.ServiceProvider.GetRequiredService<IAuthenticatedClientFactory>();
         _authenticatedHttpClient = authenticatedClientFactory.CreateHttpClient(_authProfile.Resource.Resource, _authProfile.Resource.Resource);
+        _graphClient = authenticatedClientFactory.CreateHttpClient(App.MicrosoftGraph, App.MicrosoftGraph);
 
         _metadataEmbeddingCollection = MetadataEmbeddingCollection.Load(_options.Value);
         _metadataEmbeddingCollection.Refresh();
@@ -99,6 +95,12 @@ public partial class MainWindow : Window
         Initialize();
     }
 
+
+    private async void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        _promptBuilder.UserProfile = await _graphClient.Get<Profile>(new Uri("/v1.0/me", UriKind.Relative), _authProfile);
+    }
+
     private void Initialize()
     {
         _gridView.Columns.Clear();
@@ -106,6 +108,7 @@ public partial class MainWindow : Window
         _history.Items.Clear();
         Dispatcher.Invoke(() => _prompt.Text = string.Empty);
         _userPromptHistory = new ();
+        _promptBuilder = new ();
 
         _openAiChatCompletionsOptions = new ChatCompletionsOptions()
         {
@@ -117,7 +120,7 @@ public partial class MainWindow : Window
         };
         _openAiCompletionsOptions = new CompletionsOptions()
         {
-            Prompts = { SystemPrompt },
+            Prompts = { PromptBuilder.SystemPrompt },
             Temperature = 0f,
             MaxTokens = 2000,
             NucleusSamplingFactor = 0f,
@@ -149,7 +152,7 @@ public partial class MainWindow : Window
             var embeddingVector = await _metadataEmbeddingCollection.GetEmbeddingVector(_userPromptHistory.ToString());
             var topEmbeddings = _metadataEmbeddingCollection.GetTopSimilarities(embeddingVector);
 
-            var fetchXmlModel = await GetFetchXmlModelFromAI(topEmbeddings, _userPromptHistory.ToString());
+            var fetchXmlModel = await GetFetchXmlModelFromAI(_userPromptHistory.ToString(), topEmbeddings);
             if (fetchXmlModel == null)
                 return;
 
@@ -310,34 +313,12 @@ public partial class MainWindow : Window
         return null;
     }
 
-    private async Task<FetchXmlModel?> GetFetchXmlModelFromAI(IList<MetadataEmbedding> metadataEmbeddings, string prompt)
+    private async Task<FetchXmlModel?> GetFetchXmlModelFromAI(string prompt, IList<MetadataEmbedding> metadataEmbeddings)
     {
         if (_options.Value.UseCompletionAPI)
-        {
-            var completionPrompt = new StringBuilder();
-            completionPrompt.AppendLine(SystemPrompt);
-            completionPrompt.AppendLine(TablesPromptPrefix);
-            foreach (var metadataEmbedding in metadataEmbeddings)
-            {
-                completionPrompt.Append(metadataEmbedding.Prompt);
-            }
-            completionPrompt.Append(UserPromptPrefix);
-            completionPrompt.Append($"{prompt}.{Environment.NewLine}");
-            // Important to add '.' at the end of the prompt to make sure the AI doesn't try to complete the query with suggestions
-            _openAiCompletionsOptions!.Prompts[0] = completionPrompt.ToString();
-        }
+            _openAiCompletionsOptions!.Prompts[0] = _promptBuilder.Build(prompt, metadataEmbeddings);
         else
-        {
-            _openAiChatCompletionsOptions!.Messages.Clear();
-            _openAiChatCompletionsOptions!.Messages.Add(new ChatMessage(ChatRole.Assistant, SystemPrompt));
-            _openAiChatCompletionsOptions!.Messages.Add(new ChatMessage(ChatRole.Assistant, TablesPromptPrefix));
-            foreach (var metadataEmbedding in metadataEmbeddings)
-            {
-                _openAiChatCompletionsOptions!.Messages.Add(new ChatMessage(ChatRole.Assistant, metadataEmbedding.Prompt));
-            }
-            _openAiChatCompletionsOptions!.Messages.Add(new ChatMessage(ChatRole.Assistant, UserPromptPrefix));
-            _openAiChatCompletionsOptions!.Messages.Add(new ChatMessage(ChatRole.User, $"{prompt}.{Environment.NewLine}"));
-        }
+            _promptBuilder.Build(_openAiChatCompletionsOptions!.Messages, prompt, metadataEmbeddings);
 
         Dispatcher.Invoke(() => _statusBarText.Text = $"Waiting for OpenAI's response");
 

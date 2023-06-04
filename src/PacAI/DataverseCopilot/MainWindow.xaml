@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:DataverseCopilot" FontFamily="Segoe UI" FontSize="16"
         mc:Ignorable="d" FocusManager.FocusedElement="{Binding ElementName=_prompt}"
         Background="#FBF5FB" WindowStartupLocation="CenterScreen"
+        Loaded="Window_Loaded"
         Title="Dataverse Copilot Demo with PAC CLI" Height="450" Width="900">
     <Window.Resources>
         <Style x:Key="TransparentStyle" TargetType="{x:Type Button}">

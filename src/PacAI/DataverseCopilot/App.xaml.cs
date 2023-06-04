@@ -24,6 +24,8 @@ namespace DataverseCopilot
     /// </summary>
     public partial class App : Application
     {
+        public static readonly Uri MicrosoftGraph = new Uri("https://graph.microsoft.com");
+
         public static IServiceProvider ServiceProvider { get; private set; }
 
         static App()
