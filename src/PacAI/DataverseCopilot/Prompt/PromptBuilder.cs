@@ -14,7 +14,7 @@ internal class PromptBuilder
                 - You do not use all-attributes
                 - You can return only one query
                 - You can ask clarifying questions about which Dataverse table, attribute, etc. to use
-        ";
+    ";
     public const string TablesPromptPrefix = "User has following tables in addition to many others: ";
     public const string UserPromptPrefix = "Write a query which returns: ";
 
@@ -23,8 +23,8 @@ internal class PromptBuilder
     public string Build(string prompt, IList<MetadataEmbedding> metadataEmbeddings)
     {
         var completionPrompt = new StringBuilder();
-        completionPrompt.AppendLine(UserProfilePrompt);
         completionPrompt.AppendLine(SystemPrompt);
+        completionPrompt.AppendLine(UserProfilePrompt);
         completionPrompt.AppendLine(TablesPromptPrefix);
         foreach (var metadataEmbedding in metadataEmbeddings)
         {
@@ -39,8 +39,8 @@ internal class PromptBuilder
     public void Build(IList<ChatMessage> messages, string prompt, IList<MetadataEmbedding> metadataEmbeddings)
     {
         messages.Clear();
-        messages.Add(new ChatMessage(ChatRole.System, UserProfilePrompt));
         messages.Add(new ChatMessage(ChatRole.System, SystemPrompt));
+        messages.Add(new ChatMessage(ChatRole.System, UserProfilePrompt));
         messages.Add(new ChatMessage(ChatRole.System, TablesPromptPrefix));
         foreach (var metadataEmbedding in metadataEmbeddings)
         {
@@ -58,18 +58,19 @@ internal class PromptBuilder
                 return string.Empty;
 
             var prompt = new StringBuilder();
+            prompt.AppendLine($"You are assisting a user with:");
             if (string.IsNullOrWhiteSpace(UserProfile.DisplayName))
-                prompt.AppendLine($"- User name: {UserProfile.DisplayName}");
+                prompt.AppendLine($"Name: {UserProfile.DisplayName}");
             if (string.IsNullOrWhiteSpace(UserProfile.givenName))
-                prompt.AppendLine($"- User given name: {UserProfile.givenName}");
+                prompt.AppendLine($"Given name: {UserProfile.givenName}");
             if (string.IsNullOrWhiteSpace(UserProfile.surname))
-                prompt.AppendLine($"- User surname: {UserProfile.surname}");
+                prompt.AppendLine($"Surname: {UserProfile.surname}");
             if (string.IsNullOrWhiteSpace(UserProfile.mail))
-                prompt.AppendLine($"- User email: {UserProfile.mail}");
+                prompt.AppendLine($"email: {UserProfile.mail}");
             if (string.IsNullOrWhiteSpace(UserProfile.userPrincipalName))
-                prompt.AppendLine($"- User principal name or email:  {UserProfile.userPrincipalName}");
+                prompt.AppendLine($"User principal name or email:  {UserProfile.userPrincipalName}");
             if (string.IsNullOrWhiteSpace(UserProfile.mobilePhone))
-                prompt.AppendLine($"- User mobile phone: {UserProfile.mail}");
+                prompt.AppendLine($"Mobile phone: {UserProfile.mail}");
             return prompt.ToString();
         }
     }
