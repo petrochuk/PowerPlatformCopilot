@@ -42,11 +42,10 @@ public partial class MainWindow : Window
     const string SystemPrompt =
         @"
                 - You are an assistant who translates language to FetchXML query against Dataverse environment
-                - You do not add extra filters, conditions and links to the query unless the user asks you to
+                - You can add most commonly used columns to the query
                 - You can use any FetchXML function, operator, attribute, table, entity
-                - You avoid adding all-attributes
-                - You add only minimum number of attributes
-                - You do not provide any tips, suggestions or possible queries
+                - You do not use all-attributes
+                - You can return only one query
                 - You can ask clarifying questions about which Dataverse table, attribute, etc. to use
         ";
     const string TablesPromptPrefix = "User has following tables in addition to many others: ";
@@ -272,7 +271,10 @@ public partial class MainWindow : Window
                                 columnFormat = $"{{0:c}}";
                                 break;
                         }
-                        columnHeader += attributeMetadataModel.DisplayName.UserLocalizedLabel.Label;
+                        if (attributeMetadataModel.DisplayName.UserLocalizedLabel != null)
+                            columnHeader += attributeMetadataModel.DisplayName.UserLocalizedLabel.Label;
+                        else
+                            columnHeader += attributeMetadataModel.LogicalName;
                     }
                     else
                     {

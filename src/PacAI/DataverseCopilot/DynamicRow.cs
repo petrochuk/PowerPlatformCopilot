@@ -97,6 +97,9 @@ public class DynamicRow : DynamicObject
             case JsonValueKind.String:
                 result = jsonElement.GetString();
                 break;
+            case JsonValueKind.Object:
+                result = null;
+                break;
             default:
                 result = jsonElement.GetString();
                 break;
