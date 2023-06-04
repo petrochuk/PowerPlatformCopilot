@@ -58,11 +58,16 @@ internal class PromptBuilder
                 return string.Empty;
 
             var prompt = new StringBuilder();
-            prompt.AppendLine($"- User name: {UserProfile.DisplayName}");
-            prompt.AppendLine($"- User given name: {UserProfile.givenName}");
-            prompt.AppendLine($"- User surname: {UserProfile.surname}");
-            prompt.AppendLine($"- User email: {UserProfile.mail}");
-            prompt.AppendLine($"- User principla name or email:  {UserProfile.userPrincipalName}");
+            if (string.IsNullOrWhiteSpace(UserProfile.DisplayName))
+                prompt.AppendLine($"- User name: {UserProfile.DisplayName}");
+            if (string.IsNullOrWhiteSpace(UserProfile.givenName))
+                prompt.AppendLine($"- User given name: {UserProfile.givenName}");
+            if (string.IsNullOrWhiteSpace(UserProfile.surname))
+                prompt.AppendLine($"- User surname: {UserProfile.surname}");
+            if (string.IsNullOrWhiteSpace(UserProfile.mail))
+                prompt.AppendLine($"- User email: {UserProfile.mail}");
+            if (string.IsNullOrWhiteSpace(UserProfile.userPrincipalName))
+                prompt.AppendLine($"- User principal name or email:  {UserProfile.userPrincipalName}");
             if (string.IsNullOrWhiteSpace(UserProfile.mobilePhone))
                 prompt.AppendLine($"- User mobile phone: {UserProfile.mail}");
             return prompt.ToString();
