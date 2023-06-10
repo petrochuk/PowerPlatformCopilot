@@ -12,9 +12,9 @@ namespace DataverseCopilot.TextToSpeech;
 public class SpeechAssistant : ISpeechAssistant
 {
     SpeechSynthesizer _speechSynthesizer;
-    PacAppSettings _pacAppSettings;
+    AppSettings _pacAppSettings;
 
-    public SpeechAssistant(IOptions<PacAppSettings> pacAppSettings)
+    public SpeechAssistant(IOptions<AppSettings> pacAppSettings)
     {
         _pacAppSettings = pacAppSettings.Value;
 

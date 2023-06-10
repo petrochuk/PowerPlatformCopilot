@@ -1,16 +1,17 @@
 ﻿#region usings
-using Azure;
 using Azure.AI.OpenAI;
 using bolt.cli;
 using bolt.dataverse.model;
-using bolt.module.ai;
+using bolt.module.copilot;
 using CsvHelper;
-using DataverseCopilot.Graph.Models;
+using DataverseCopilot.AzureAI;
+using DataverseCopilot.Dialog;
 using DataverseCopilot.Prompt;
 using DataverseCopilot.TextToSpeech;
-using Microsoft.CognitiveServices.Speech;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Graph;
+using Microsoft.Graph.Models.ODataErrors;
 using Microsoft.Win32;
 using System.ComponentModel;
 using System.Globalization;
@@ -24,7 +25,6 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Xml;
 using System.Xml.Serialization;
-using static System.Net.Mime.MediaTypeNames;
 #endregion
 
 namespace DataverseCopilot;
@@ -34,11 +34,13 @@ namespace DataverseCopilot;
 /// </summary>
 public partial class MainWindow : Window
 {
+    #region Construction
+
     IAuthenticatedHttpClient _authenticatedHttpClient;
-    IAuthenticatedHttpClient _graphClient;
+    GraphServiceClient _graphClient;
     IAuthProfilesManager _authProfilesManager;
     AuthProfile _authProfile;
-    IOptions<PacAppSettings> _options;
+    IOptions<AppSettings> _options;
     XmlSerializer _fetchXmlModelSerializer = new XmlSerializer(typeof(FetchXmlModel));
     Dictionary<string, GridViewColumn>? _columnMap;
     GridView _gridView = new GridView();
@@ -47,6 +49,8 @@ public partial class MainWindow : Window
     MetadataEmbeddingCollection _metadataEmbeddingCollection;
     StringBuilder _userPromptHistory;
     PromptBuilder _promptBuilder;
+    Context _context = new Context();
+    Client _aiClient;
 
     ISpeechAssistant _speechAssistant;
 
@@ -59,39 +63,36 @@ public partial class MainWindow : Window
 
         _listView.View = _gridView;
 
-        _options = App.ServiceProvider.GetRequiredService<IOptions<PacAppSettings>>();
+        _options = App.ServiceProvider.GetRequiredService<IOptions<AppSettings>>();
         _authProfilesManager = App.ServiceProvider.GetRequiredService<IAuthProfilesManager>();
         _authProfile = _authProfilesManager.GetCurrentWithPreference(AuthKind.Universal);
         _authProfile.Resource = AuthResource.Parse(_options.Value.DataverseEnvironmentUri);
         var authenticatedClientFactory = App.ServiceProvider.GetRequiredService<IAuthenticatedClientFactory>();
         _authenticatedHttpClient = authenticatedClientFactory.CreateHttpClient(_authProfile.Resource.Resource, _authProfile.Resource.Resource);
-        _graphClient = authenticatedClientFactory.CreateHttpClient(App.MicrosoftGraph, App.MicrosoftGraph);
+        _graphClient = App.ServiceProvider.GetRequiredService<GraphServiceClient>();
         _speechAssistant = App.ServiceProvider.GetRequiredService<ISpeechAssistant>();
 
         _metadataEmbeddingCollection = MetadataEmbeddingCollection.Load(_options.Value);
-        _metadataEmbeddingCollection.Refresh();
+        //_metadataEmbeddingCollection.Refresh();
+
+        _aiClient = new Client(_options);
 
         Initialize();
     }
 
-    OpenAIClient? _openAIClient;
-    public OpenAIClient OpenAIClient
+    private void Initialize()
     {
-        get
-        {
-            if (_openAIClient != null)
-                return _openAIClient;
+        _gridView.Columns.Clear();
+        _listView.Items.Clear();
+        _history.Items.Clear();
+        Dispatcher.Invoke(() => _prompt.Text = string.Empty);
+        _userPromptHistory = new();
+        _promptBuilder = new();
 
-            if (string.IsNullOrWhiteSpace(_options.Value.OpenApiEndPoint) || string.IsNullOrWhiteSpace(_options.Value.OpenApiKey))
-                throw new InvalidOperationException("OpenAI endpoint or key are not configured");
-
-            _openAIClient = new OpenAIClient(
-                new Uri(_options.Value.OpenApiEndPoint),
-                new AzureKeyCredential(_options.Value.OpenApiKey));
-
-            return _openAIClient;
-        }
+        Dispatcher.Invoke(() => _statusBarText.Text = ReadyInitialMessage);
     }
+
+    #endregion
 
     FetchXmlCleaner? _fetchXmlCleaner;
     public FetchXmlCleaner FetchXmlCleaner => _fetchXmlCleaner ??= new FetchXmlCleaner(_authenticatedHttpClient, _authProfile);
@@ -102,49 +103,30 @@ public partial class MainWindow : Window
     }
 
 
-
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
         try
         {
-            _promptBuilder.UserProfile = await _graphClient.Get<Profile>(new Uri("/v1.0/me", UriKind.Relative), _authProfile);
-            await _speechAssistant.Speak($"Hello {_promptBuilder.UserProfile.givenName}");
+            _context.UserProfile = await _graphClient.Me.GetAsync();
+            var welcomePrompt = new PromptBuilder();
+
+            welcomePrompt.Add("Use following context: ");
+            welcomePrompt.AddToday();
+            welcomePrompt.AddUserProfile(_context.UserProfile);
+            welcomePrompt.Add("Write short greeting for today: ");
+
+            var response = await _aiClient.GetResponse(welcomePrompt);
+
+            await _speechAssistant.Speak($"{response}");
+        }
+        catch (ODataError ex) when (ex.Error != null)
+        {
+            MessageBox.Show(this, $"{ex.Error.Message}", "Internal error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         catch (Exception ex)
         {
             MessageBox.Show(this, $"{ex.Message}", "Internal error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-    }
-
-    private void Initialize()
-    {
-        _gridView.Columns.Clear();
-        _listView.Items.Clear();
-        _history.Items.Clear();
-        Dispatcher.Invoke(() => _prompt.Text = string.Empty);
-        _userPromptHistory = new ();
-        _promptBuilder = new ();
-
-        _openAiChatCompletionsOptions = new ChatCompletionsOptions()
-        {
-            Temperature = 0f,
-            MaxTokens = 2000,
-            NucleusSamplingFactor = 0f,
-            FrequencyPenalty = 0,
-            PresencePenalty = 0,
-        };
-        _openAiCompletionsOptions = new CompletionsOptions()
-        {
-            Prompts = { PromptBuilder.SystemPrompt },
-            Temperature = 0f,
-            MaxTokens = 2000,
-            NucleusSamplingFactor = 0f,
-            FrequencyPenalty = 0,
-            PresencePenalty = 0,
-            LogProbabilityCount = 20,
-        };
-
-        Dispatcher.Invoke(() => _statusBarText.Text = ReadyInitialMessage);
     }
 
     private async void Submit_Click(object sender, RoutedEventArgs e)
@@ -167,7 +149,7 @@ public partial class MainWindow : Window
             var embeddingVector = await _metadataEmbeddingCollection.GetEmbeddingVector(_userPromptHistory.ToString());
             var topEmbeddings = _metadataEmbeddingCollection.GetTopSimilarities(embeddingVector);
 
-            var fetchXmlModel = await GetFetchXmlModelFromAI(_userPromptHistory.ToString(), topEmbeddings);
+            FetchXmlModel fetchXmlModel = null;// await GetFetchXmlModelFromAI(_userPromptHistory.ToString(), topEmbeddings);
             if (fetchXmlModel == null)
                 return;
 
@@ -328,6 +310,7 @@ public partial class MainWindow : Window
         return null;
     }
 
+    /*
     private async Task<FetchXmlModel?> GetFetchXmlModelFromAI(string prompt, IList<MetadataEmbedding> metadataEmbeddings)
     {
         if (_options.Value.UseCompletionAPI)
@@ -390,7 +373,7 @@ public partial class MainWindow : Window
             throw new VerbExecutionException(ex.Message, ex);
         }
     }
-
+    */
 
     protected override void OnClosing(CancelEventArgs e)
     {

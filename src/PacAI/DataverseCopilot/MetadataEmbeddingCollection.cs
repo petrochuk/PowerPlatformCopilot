@@ -21,11 +21,11 @@ internal class MetadataEmbeddingCollection
     private string _metadataEmbeddingsFolder;
     private Thread? _backgroundRefreshThread;
     private OpenAIClient _openAIClient;
-    private PacAppSettings _appSettings;
+    private AppSettings _appSettings;
     private JsonSerializerOptions _jsonSerializerOptions = new();
     private bool _stopRefresh = false;
 
-    public static MetadataEmbeddingCollection Load(PacAppSettings appSettings)
+    public static MetadataEmbeddingCollection Load(AppSettings appSettings)
     {
         _ = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
         var metadataEmbeddingsFolder = Path.Combine(

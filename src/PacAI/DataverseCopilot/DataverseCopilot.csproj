@@ -37,6 +37,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="7.0.1" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Graph" Version="5.13.0" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.54.1" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="0.15.230609.2-preview" />
   </ItemGroup>
@@ -50,8 +51,8 @@
     <Reference Include="bolt.dataverse">
       <HintPath>..\paccli\net6.0\bolt.dataverse.dll</HintPath>
     </Reference>
-    <Reference Include="bolt.module.ai">
-      <HintPath>..\paccli\net6.0\bolt.module.ai.dll</HintPath>
+    <Reference Include="bolt.module.copilot">
+      <HintPath>..\paccli\net6.0\bolt.module.copilot.dll</HintPath>
     </Reference>
     <Reference Include="bolt.module.admin">
       <HintPath>..\paccli\net6.0\bolt.module.admin.dll</HintPath>

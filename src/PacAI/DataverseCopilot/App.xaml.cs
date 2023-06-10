@@ -9,10 +9,13 @@ using bolt.dataverse.client;
 using bolt.module.admin;
 using bolt.module.auth;
 using bolt.system;
+using DataverseCopilot.Graph;
 using DataverseCopilot.TextToSpeech;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Graph;
+using Microsoft.Kiota.Abstractions.Authentication;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -46,9 +49,9 @@ namespace DataverseCopilot
         private static void ConfigureServices(IServiceCollection services)
         {
             var config = LoadConfiguration();
-            var pacAppSettings = config.GetSection(nameof(PacAppSettings)).Get<PacAppSettings>();
+            var appSettings = config.GetSection(nameof(AppSettings)).Get<AppSettings>();
 
-            services.AddOptions<PacAppSettings>().Bind(config.GetSection(nameof(PacAppSettings)));
+            services.AddOptions<AppSettings>().Bind(config.GetSection(nameof(AppSettings)));
             services.AddSingleton<ILocalizedStrings<LocString>>(_ => new LocalizedStrings<LocString>(CultureInfo.CurrentUICulture, "loc"));
             services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
             services.AddSingleton<IFeatureFlags, FeatureFlags>();
@@ -60,7 +63,7 @@ namespace DataverseCopilot
             services.AddSingleton(new AuthOptions());
             services.AddSingleton(new MsalLoggingOptions
             {
-                MinLogLevel = LogLevel.Trace, // Enable Trace, but our NLog config will apply the actual filter
+                MinLogLevel = Microsoft.Extensions.Logging.LogLevel.Trace, // Enable Trace, but our NLog config will apply the actual filter
                 EnablePiiLogging = true,
             });
             services.AddSingleton<IEnvirons, Environs>();
@@ -73,8 +76,11 @@ namespace DataverseCopilot
             services.AddLazyServiceResolution();
 
             services.AddSingleton(new ClientApplicationConfiguration(
-                clientId: new Guid(pacAppSettings?.AzureAppId!),
-                new Uri($"app://{pacAppSettings?.AzureAppId}")));
+                new Guid(appSettings?.AzureAppId!),
+                new Uri($"app://{appSettings?.AzureAppId}")));
+
+            services.AddSingleton<IAuthenticationProvider, GraphAuthenticationProvider>();
+            services.AddSingleton<GraphServiceClient>();
 
             services.AddHttpClient(DataverseConstants.HttpClientName, (client) =>
             {
