@@ -1,4 +1,5 @@
-﻿using bolt;
+﻿#region usings
+using bolt;
 using bolt.authentication;
 using bolt.authentication.profiles;
 using bolt.authentication.store;
@@ -8,14 +9,15 @@ using bolt.dataverse.client;
 using bolt.module.admin;
 using bolt.module.auth;
 using bolt.system;
+using DataverseCopilot.TextToSpeech;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Windows;
+#endregion
 
 namespace DataverseCopilot
 {
@@ -81,6 +83,8 @@ namespace DataverseCopilot
                 client.DefaultRequestHeaders.Add(userAgent, $"pac/example.0 (win;)");
             });
             services.AddLogging(configure => configure.AddDebug());
+
+            services.AddSingleton<ISpeechAssistant, SpeechAssistant>();
         }
 
         private static IConfiguration LoadConfiguration()

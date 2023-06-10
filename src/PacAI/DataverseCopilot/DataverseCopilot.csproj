@@ -68,7 +68,4 @@
   <ItemGroup>
     <Using Include="System.Diagnostics" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="TextToSepeach\" />
-  </ItemGroup>
 </Project>

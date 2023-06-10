@@ -7,6 +7,7 @@ using bolt.module.ai;
 using CsvHelper;
 using DataverseCopilot.Graph.Models;
 using DataverseCopilot.Prompt;
+using DataverseCopilot.TextToSpeech;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -47,10 +48,7 @@ public partial class MainWindow : Window
     StringBuilder _userPromptHistory;
     PromptBuilder _promptBuilder;
 
-    /// <summary>
-    /// https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-synthesis-markup-voice#speaking-styles-and-roles
-    /// </summary>
-    SpeechSynthesizer _speechSynthesizer;
+    ISpeechAssistant _speechAssistant;
 
     const string ReadyInitialMessage = $"Ready to chat with OpenAI";
     const string ReadyMessage = $"Ready";
@@ -68,6 +66,7 @@ public partial class MainWindow : Window
         var authenticatedClientFactory = App.ServiceProvider.GetRequiredService<IAuthenticatedClientFactory>();
         _authenticatedHttpClient = authenticatedClientFactory.CreateHttpClient(_authProfile.Resource.Resource, _authProfile.Resource.Resource);
         _graphClient = authenticatedClientFactory.CreateHttpClient(App.MicrosoftGraph, App.MicrosoftGraph);
+        _speechAssistant = App.ServiceProvider.GetRequiredService<ISpeechAssistant>();
 
         _metadataEmbeddingCollection = MetadataEmbeddingCollection.Load(_options.Value);
         _metadataEmbeddingCollection.Refresh();
@@ -108,24 +107,8 @@ public partial class MainWindow : Window
     {
         try
         {
-            var speechConfig = SpeechConfig.FromSubscription(
-                _options.Value.SpeechSubscriptionKey,
-                _options.Value.SpeechSubscriptionRegion);
-
             _promptBuilder.UserProfile = await _graphClient.Get<Profile>(new Uri("/v1.0/me", UriKind.Relative), _authProfile);
-
-            speechConfig.SpeechSynthesisVoiceName = _options.Value.SpeechSynthesisVoiceName;
-
-            _speechSynthesizer = new SpeechSynthesizer(speechConfig);
-
-            var text = 
-@$"<speak version='1.0' xmlns='https://www.w3.org/2001/10/synthesis' xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>
-    <voice name='{_options.Value.SpeechSynthesisVoiceName}'>
-        <mstts:express-as style='Cheerful'>hello {_promptBuilder.UserProfile.givenName}
-        </mstts:express-as>
-    </voice>
-</speak>";
-            var speechSynthesisResult = await _speechSynthesizer.SpeakSsmlAsync(text);
+            await _speechAssistant.Speak($"Hello {_promptBuilder.UserProfile.givenName}");
         }
         catch (Exception ex)
         {
