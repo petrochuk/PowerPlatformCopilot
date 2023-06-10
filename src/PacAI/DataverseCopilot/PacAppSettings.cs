@@ -11,4 +11,7 @@ public class PacAppSettings
     public string? OpenApiEmbeddingsModel { get; set; }
     public bool UseCompletionAPI { get; set; } = true;
     public string? AzureAppId { get; set; }
+    public string? SpeechSubscriptionKey { get; set; }
+    public string? SpeechSubscriptionRegion { get; set; }
+    public string? SpeechSynthesisVoiceName { get; set; }
 }

@@ -7,6 +7,7 @@ using bolt.module.ai;
 using CsvHelper;
 using DataverseCopilot.Graph.Models;
 using DataverseCopilot.Prompt;
+using Microsoft.CognitiveServices.Speech;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Win32;
@@ -22,6 +23,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Xml;
 using System.Xml.Serialization;
+using static System.Net.Mime.MediaTypeNames;
 #endregion
 
 namespace DataverseCopilot;
@@ -44,6 +46,11 @@ public partial class MainWindow : Window
     MetadataEmbeddingCollection _metadataEmbeddingCollection;
     StringBuilder _userPromptHistory;
     PromptBuilder _promptBuilder;
+
+    /// <summary>
+    /// https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-synthesis-markup-voice#speaking-styles-and-roles
+    /// </summary>
+    SpeechSynthesizer _speechSynthesizer;
 
     const string ReadyInitialMessage = $"Ready to chat with OpenAI";
     const string ReadyMessage = $"Ready";
@@ -96,9 +103,34 @@ public partial class MainWindow : Window
     }
 
 
+
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        _promptBuilder.UserProfile = await _graphClient.Get<Profile>(new Uri("/v1.0/me", UriKind.Relative), _authProfile);
+        try
+        {
+            var speechConfig = SpeechConfig.FromSubscription(
+                _options.Value.SpeechSubscriptionKey,
+                _options.Value.SpeechSubscriptionRegion);
+
+            _promptBuilder.UserProfile = await _graphClient.Get<Profile>(new Uri("/v1.0/me", UriKind.Relative), _authProfile);
+
+            speechConfig.SpeechSynthesisVoiceName = _options.Value.SpeechSynthesisVoiceName;
+
+            _speechSynthesizer = new SpeechSynthesizer(speechConfig);
+
+            var text = 
+@$"<speak version='1.0' xmlns='https://www.w3.org/2001/10/synthesis' xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>
+    <voice name='{_options.Value.SpeechSynthesisVoiceName}'>
+        <mstts:express-as style='Cheerful'>hello {_promptBuilder.UserProfile.givenName}
+        </mstts:express-as>
+    </voice>
+</speak>";
+            var speechSynthesisResult = await _speechSynthesizer.SpeakSsmlAsync(text);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"{ex.Message}", "Internal error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void Initialize()
