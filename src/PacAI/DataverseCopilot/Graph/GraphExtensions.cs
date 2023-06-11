@@ -1,4 +1,7 @@
-﻿namespace DataverseCopilot.Graph;
+﻿using Microsoft.Graph.Models;
+using System.Text;
+
+namespace DataverseCopilot.Graph;
 
 internal static class GraphExtensions
 {
@@ -18,5 +21,19 @@ internal static class GraphExtensions
         }
 
         return subject;
+    }
+
+    public static string ToEmbedding(this Message message)
+    {
+        var sb = new StringBuilder();
+
+        sb.Append("From:");
+        sb.AppendLine(message.From.EmailAddress.Name);
+        sb.Append("From email:");
+        sb.AppendLine(message.From.EmailAddress.Address);
+        sb.Append("Subject:");
+        sb.AppendLine(message.Subject.CleanupSubject());
+
+        return sb.ToString();
     }
 }

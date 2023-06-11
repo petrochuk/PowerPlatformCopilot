@@ -49,8 +49,7 @@ public partial class MainWindow : Window
     GridView _gridView = new GridView();
     MetadataEmbeddingCollection _metadataEmbeddingCollection;
     StringBuilder _userPromptHistory;
-    PromptBuilder _promptBuilder;
-    Context _context = new Context();
+    Context _context;
     Client _aiClient;
     GreetingHistory _greetingHistory;
 
@@ -74,6 +73,7 @@ public partial class MainWindow : Window
         _graphClient = App.ServiceProvider.GetRequiredService<GraphServiceClient>();
         _speechAssistant = App.ServiceProvider.GetRequiredService<ISpeechAssistant>();
 
+        _context = new (_options.Value);
         _metadataEmbeddingCollection = MetadataEmbeddingCollection.Load(_options.Value);
         _greetingHistory = GreetingHistory.Load();
         //_metadataEmbeddingCollection.Refresh();
@@ -90,7 +90,6 @@ public partial class MainWindow : Window
         _history.Items.Clear();
         Dispatcher.Invoke(() => _prompt.Text = string.Empty);
         _userPromptHistory = new();
-        _promptBuilder = new();
 
         Dispatcher.Invoke(() => _statusBarText.Text = ReadyInitialMessage);
     }
@@ -117,23 +116,23 @@ public partial class MainWindow : Window
                 // q => { q.QueryParameters.Filter = "isRead eq false"; }
             );
 
-            var welcomePrompt = new PromptBuilder();
+            var welcomePrompt = new PromptBuilder(addAssistantGrounding: true);
             welcomePrompt.AddToday();
             welcomePrompt.AddUserProfile(_context.UserProfile);
             welcomePrompt.Avoid(_greetingHistory.Items);
             welcomePrompt.Add("Hello assistant.");
 
-            var response = await _aiClient.GetResponse(welcomePrompt);
-            _greetingHistory.Add(response);
-            await _speechAssistant.Speak($"{response}");
+            var welcomeResponse = await _aiClient.GetResponse(welcomePrompt);
+            _greetingHistory.Add(welcomeResponse);
 
-            var emailPrompt = new PromptBuilder();
+            var emailPrompt = new PromptBuilder(addAssistantGrounding: true);
             emailPrompt.Add($"Use following list of my emails: ");
             int emailCount = 0;
             var pageIterator = PageIterator<Message, MessageCollectionResponse>.CreatePageIterator(
             _graphClient, emails,
             (m) =>
             {
+                _context.AddMessage(m);
                 emailCount++;
                 emailPrompt.Add($"From: {m.From.EmailAddress.Name}");
                 emailPrompt.Add($"Subject: {m.Subject.CleanupSubject()}");
@@ -143,7 +142,8 @@ public partial class MainWindow : Window
 
             emailPrompt.Add($"Give me a short summary about my emails. Don't talk about each one: ");
             var emailResponse = await _aiClient.GetResponse(emailPrompt);
-            await _speechAssistant.Speak($"{emailResponse}");
+            await _speechAssistant.Speak($"{welcomeResponse}.");
+            await _speechAssistant.Speak($"{emailResponse}.");
         }
         catch (ODataError ex) when (ex.Error != null)
         {
@@ -156,6 +156,19 @@ public partial class MainWindow : Window
     }
 
     private async void Submit_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_prompt.Text))
+            return;
+
+        var intentPrompt = new PromptBuilder(addIntentGrounding: true);
+
+        intentPrompt.Add(_prompt.Text);
+        var intentResponse = await _aiClient.GetResponse(intentPrompt);
+
+        var message = await _context.FindRelevantMessage(intentResponse);
+    }
+
+    private async void Submit_Click_DV(object sender, RoutedEventArgs e)
     {
         try
         {

@@ -18,9 +18,12 @@ internal class PromptBuilder
     public const string TablesPromptPrefix = "User has following tables in addition to many others: ";
     public const string UserPromptPrefix = "Write a query which returns: ";
 
-    public PromptBuilder()
+    public PromptBuilder(bool addAssistantGrounding = false, bool addIntentGrounding = false)
     {
-        AddAssistantGrounding();
+        if (addAssistantGrounding)
+            AddAssistantGrounding();
+        if (addIntentGrounding)
+            AddIntentGrounding();
     }
 
     IList<ChatMessage> _messages = new List<ChatMessage>();
@@ -67,6 +70,17 @@ internal class PromptBuilder
         _messages.Add(new ChatMessage(ChatRole.System, $"You help me with my daily tasks"));
         _messages.Add(new ChatMessage(ChatRole.System, $"You provide me with useful and actionable information"));
         _messages.Add(new ChatMessage(ChatRole.System, $"Your responses are short"));
+    }
+
+    public void AddIntentGrounding()
+    {
+        _messages.Add(new ChatMessage(ChatRole.System, $"You are an assistant who understands and extracts user intent"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Intent can be either a GET or a SET"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"GET - get, find, search, query more information, details, data"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"SET - perform an action such as send, save, delete, copy, move"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"GET can have source - Email, FileSystem, Dataverse, Calendar, Task"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"SET can have target - Email, FileSystem, Dataverse, Calendar, Task"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"you respond with intent:, source:, target:, filter:"));
     }
 
     public void AddToday()
