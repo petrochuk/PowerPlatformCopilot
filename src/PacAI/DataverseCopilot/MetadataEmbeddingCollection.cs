@@ -36,13 +36,13 @@ internal class MetadataEmbeddingCollection
             Directory.CreateDirectory(metadataEmbeddingsFolder);
         var environmentFileName = Path.Combine(metadataEmbeddingsFolder, appSettings.DataverseEnvironmentUri!.Host + ".json");
 
-        using var openStream = File.OpenRead(environmentFileName);
-
         MetadataEmbeddingCollection? collection = null;
         try
         {
+            using var openStream = File.OpenRead(environmentFileName);
             collection = JsonSerializer.Deserialize<MetadataEmbeddingCollection>(openStream);
         }
+        catch (IOException) { }
         catch (JsonException)
         {
         }

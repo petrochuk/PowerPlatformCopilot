@@ -33,7 +33,7 @@ internal class Client
             var completionOptions = new CompletionsOptions()
             {
                 Temperature = 1,
-                MaxTokens = 1000,
+                MaxTokens = 2000,
                 NucleusSamplingFactor = 0.5f,
                 FrequencyPenalty = 0,
                 PresencePenalty = 0,

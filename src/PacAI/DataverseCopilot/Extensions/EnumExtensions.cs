@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using Microsoft.VisualBasic;
+using System.ComponentModel;
 using System.Reflection;
 
 namespace DataverseCopilot.Extensions
@@ -19,6 +20,22 @@ namespace DataverseCopilot.Extensions
             
             return source.ToString();
         }
-    }
 
+        public static List<string>? GetListOfDescriptions(this Type source)
+        {
+            if (!source.IsEnum)
+                return null;
+
+            return Enum.GetValues(source).Cast<Enum>().Select(x => x.DescriptionAttr()).ToList();
+        }
+
+        public static string GetDescriptions(this Type source)
+        {
+            var list = source.GetListOfDescriptions();
+            if (list == null)
+                return string.Empty;
+
+            return string.Join(",", list);
+        }
+    }
 }

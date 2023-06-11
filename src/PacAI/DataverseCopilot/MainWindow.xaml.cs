@@ -27,7 +27,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Xml;
 using System.Xml.Serialization;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
+using static System.Net.WebRequestMethods;
 #endregion
 
 namespace DataverseCopilot;
@@ -76,7 +76,7 @@ public partial class MainWindow : Window
         _context = new (_options.Value);
         _metadataEmbeddingCollection = MetadataEmbeddingCollection.Load(_options.Value);
         _greetingHistory = GreetingHistory.Load();
-        //_metadataEmbeddingCollection.Refresh();
+        _metadataEmbeddingCollection.Refresh();
 
         _aiClient = new Client(_options);
 
@@ -112,8 +112,11 @@ public partial class MainWindow : Window
             _context.UserProfile = await _graphClient.Me.GetAsync();
             var inbox = await _graphClient.Me.MailFolders["Inbox"].GetAsync();
             var emails = await _graphClient.Me.MailFolders["Inbox"].Messages.GetAsync(
-                q => { q.QueryParameters.Top = 10; }
-                // q => { q.QueryParameters.Filter = "isRead eq false"; }
+                q => 
+                { 
+                    q.QueryParameters.Top = 10; 
+                    q.QueryParameters.Filter = "isRead eq false";
+                }
             );
 
             var welcomePrompt = new PromptBuilder(addPersonalAssistantGrounding: true);
@@ -123,10 +126,11 @@ public partial class MainWindow : Window
             welcomePrompt.Add("Hello assistant.");
 
             var welcomeResponse = await _aiClient.GetResponse(welcomePrompt);
+            welcomeResponse = welcomeResponse.Replace($", {_context.UserProfile.GivenName}!", $" {_context.UserProfile.GivenName}!");
             _greetingHistory.Add(welcomeResponse);
 
             var emailPrompt = new PromptBuilder(addPersonalAssistantGrounding: true);
-            emailPrompt.Add($"Use following list of my emails: ");
+            emailPrompt.Add($"I received these new emails: ");
             int emailCount = 0;
             var pageIterator = PageIterator<Message, MessageCollectionResponse>.CreatePageIterator(
             _graphClient, emails,
@@ -134,16 +138,21 @@ public partial class MainWindow : Window
             {
                 _context.AddMessage(m);
                 emailCount++;
+                emailPrompt.Add($"Email {emailCount}");
                 emailPrompt.Add($"From: {m.From.EmailAddress.Name}");
                 emailPrompt.Add($"Subject: {m.Subject.CleanupSubject()}");
                 return true;
             });
             await pageIterator.IterateAsync();
 
+            // Starting resource is email
+            _context.CurrentResource = Resource.Email;
+
             emailPrompt.Add($"Give me a short summary about my emails. Don't talk about each one: ");
             var emailResponse = await _aiClient.GetResponse(emailPrompt);
             await _speechAssistant.Speak($"{welcomeResponse}.");
             await _speechAssistant.Speak($"{emailResponse}.");
+            _context.ChatHistory.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.Assistant, emailResponse));
         }
         catch (ODataError ex) when (ex.Error != null)
         {
@@ -157,112 +166,144 @@ public partial class MainWindow : Window
 
     private async void Submit_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(_prompt.Text))
-            return;
-
-        var prompt = _prompt.Text;
-        _history.Items.Add(_prompt.Text);
-        Dispatcher.Invoke(() => _prompt.Text = string.Empty);
-
-        var intentPrompt = new PromptBuilder(addIntentGrounding: true);
-
-        intentPrompt.Add(prompt);
-        var intentResponse = await _aiClient.GetResponse(intentPrompt);
-
-        var message = await _context.FindRelevantMessage(intentResponse);
-
-        var confirmationPrompt = new PromptBuilder(addConfirmationGrounding: true);
-        confirmationPrompt.Add(message);
-        var confirmationResponse = await _aiClient.GetResponse(confirmationPrompt);
-        await _speechAssistant.Speak($"{confirmationResponse}.");
-    }
-
-    private async void Submit_Click_DV(object sender, RoutedEventArgs e)
-    {
         try
         {
             if (string.IsNullOrWhiteSpace(_prompt.Text))
                 return;
 
-            _gridView.Columns.Clear();
-            _listView.Items.Clear();
-
             var prompt = _prompt.Text;
             _history.Items.Add(_prompt.Text);
-            _userPromptHistory.Append(' ');
-            _userPromptHistory.Append(prompt);
             Dispatcher.Invoke(() => _prompt.Text = string.Empty);
 
-            Dispatcher.Invoke(() => _statusBarText.Text = $"Preparing prompt to call OpenAI");
-            var embeddingVector = await _metadataEmbeddingCollection.GetEmbeddingVector(_userPromptHistory.ToString());
-            var topEmbeddings = _metadataEmbeddingCollection.GetTopSimilarities(embeddingVector);
+            var intentPrompt = new PromptBuilder(addIntentGrounding: true);
+            intentPrompt.AddAssistantHistory(_context.ChatHistory);
+            intentPrompt.Add(prompt);
+            _context.ChatHistory.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.User, prompt));
+            var intentResponse = new IntentResponse(await _aiClient.GetResponse(intentPrompt));
 
-            FetchXmlModel fetchXmlModel = null;// await GetFetchXmlModelFromAI(_userPromptHistory.ToString(), topEmbeddings);
-            if (fetchXmlModel == null)
-                return;
-
-            Dispatcher.Invoke(() => _statusBarText.Text = $"Preparing to call Dataverse");
-
-            var cleanFetchXmlModel = await FetchXmlCleaner.PrepareModelAsync(fetchXmlModel);
-            if (cleanFetchXmlModel == null)
+            switch (intentResponse.Intent)
             {
-                Dispatcher.Invoke(
-                    () => MessageBox.Show(this, "Failed to clean FetchXml", "Internal error", MessageBoxButton.OK, MessageBoxImage.Error)
-                );
-                Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
-                return;
+                case Intent.Get:
+                    GetIntent(intentResponse.Source.Value, intentResponse.Filter);
+                    break;
+                case Intent.Set:
+                    SetIntent(intentResponse.Target.Value, intentResponse.Filter);
+                    break;
             }
-
-            // Get data from FetchXML
-            var writerSettings = new XmlWriterSettings() { Indent = true, NamespaceHandling = NamespaceHandling.OmitDuplicates };
-            using var fileWriter = new StringWriter();
-            using var xmlWriter = XmlWriter.Create(fileWriter, writerSettings);
-            var xmlNamespaces = new XmlSerializerNamespaces();
-            xmlNamespaces.Add(string.Empty, string.Empty);
-
-            _fetchXmlModelSerializer.Serialize(xmlWriter, cleanFetchXmlModel, xmlNamespaces);
-
-            xmlWriter.Flush();
-            var fetchXml = fileWriter.ToString();
-            Debug.WriteLine("");
-            Debug.WriteLine("Clean FetchXML");
-            Debug.WriteLine(fetchXml);
-
-            var entityMetadata = FetchXmlCleaner.CachedEntityMetadata[cleanFetchXmlModel.Entity.Name];
-
-            Dispatcher.Invoke(() => _statusBarText.Text = $"Waiting for Dataverse response");
-            var result = await _authenticatedHttpClient.Execute(
-                new Uri($"api/data/v9.0/{entityMetadata.LogicalCollectionName}?fetchXml={System.Net.WebUtility.UrlEncode(fetchXml)}", UriKind.Relative),
-                HttpMethod.Get, _authProfile);
-            if (!result.IsSuccessStatusCode)
-            {
-                Dispatcher.Invoke(
-                    () => MessageBox.Show(this, $"Failed to read data {result.StatusCode}", "Internal error", MessageBoxButton.OK, MessageBoxImage.Error)
-                );
-                Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
-                return;
-            }
-            var resultContent = await result.Content.ReadAsStringAsync();
-            var responseData = JsonSerializer.Deserialize<ODataResponse<Dictionary<string, object>>>(resultContent);
-
-            if (responseData.value.Count <= 0)
-            {
-                Dispatcher.Invoke(
-                    () => MessageBox.Show(this, $"No results", "No results", MessageBoxButton.OK, MessageBoxImage.Information)
-                );
-                Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
-                return;
-            }
-
-            PopulateDataGrid(responseData, cleanFetchXmlModel.Entity.Name, cleanFetchXmlModel);
-
-            Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
         }
         catch (Exception ex)
         {
             Dispatcher.Invoke(() => MessageBox.Show(this, ex.Message, "Internal error", MessageBoxButton.OK, MessageBoxImage.Error));
             Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
         }
+    }
+
+    private async Task GetIntent(Resource source, string filter)
+    {
+        switch (source)
+        {
+            case Resource.Email:
+                await GetEmail(filter);
+                break;
+            case Resource.Dataverse:
+                await GetDataverse(filter);
+                break;
+        }
+    }
+
+    private async Task SetIntent(Resource target, string filter)
+    {
+        switch (target)
+        {
+            case Resource.Email:
+                break;
+        }
+    }
+
+    public async Task GetEmail(string filter)
+    {
+        _context.SuggestedMessage = await _context.FindRelevantMessage(filter);
+
+        var confirmationPrompt = new PromptBuilder();
+        confirmationPrompt.AddConfirmationGrounding(_context.CurrentResource);
+        confirmationPrompt.Add(_context.SuggestedMessage);
+        var confirmationResponse = await _aiClient.GetResponse(confirmationPrompt);
+        await _speechAssistant.Speak($"{confirmationResponse}.");
+        _context.ChatHistory.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.Assistant, confirmationResponse));
+    }
+
+    public async Task GetDataverse(string filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+            return;
+
+        _gridView.Columns.Clear();
+        _listView.Items.Clear();
+
+        Dispatcher.Invoke(() => _statusBarText.Text = $"Preparing prompt to call OpenAI");
+        var embeddingVector = await _metadataEmbeddingCollection.GetEmbeddingVector(filter);
+        var topEmbeddings = _metadataEmbeddingCollection.GetTopSimilarities(embeddingVector);
+
+        FetchXmlModel fetchXmlModel = await GetFetchXmlModelFromAI(filter, topEmbeddings);
+        if (fetchXmlModel == null)
+            return;
+
+        Dispatcher.Invoke(() => _statusBarText.Text = $"Preparing to call Dataverse");
+
+        var cleanFetchXmlModel = await FetchXmlCleaner.PrepareModelAsync(fetchXmlModel);
+        if (cleanFetchXmlModel == null)
+        {
+            Dispatcher.Invoke(
+                () => MessageBox.Show(this, "Failed to clean FetchXml", "Internal error", MessageBoxButton.OK, MessageBoxImage.Error)
+            );
+            Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
+            return;
+        }
+
+        // Get data from FetchXML
+        var writerSettings = new XmlWriterSettings() { Indent = true, NamespaceHandling = NamespaceHandling.OmitDuplicates };
+        using var fileWriter = new StringWriter();
+        using var xmlWriter = XmlWriter.Create(fileWriter, writerSettings);
+        var xmlNamespaces = new XmlSerializerNamespaces();
+        xmlNamespaces.Add(string.Empty, string.Empty);
+
+        _fetchXmlModelSerializer.Serialize(xmlWriter, cleanFetchXmlModel, xmlNamespaces);
+
+        xmlWriter.Flush();
+        var fetchXml = fileWriter.ToString();
+        Debug.WriteLine("");
+        Debug.WriteLine("Clean FetchXML");
+        Debug.WriteLine(fetchXml);
+
+        var entityMetadata = FetchXmlCleaner.CachedEntityMetadata[cleanFetchXmlModel.Entity.Name];
+
+        Dispatcher.Invoke(() => _statusBarText.Text = $"Waiting for Dataverse response");
+        var result = await _authenticatedHttpClient.Execute(
+            new Uri($"api/data/v9.0/{entityMetadata.LogicalCollectionName}?fetchXml={System.Net.WebUtility.UrlEncode(fetchXml)}", UriKind.Relative),
+            HttpMethod.Get, _authProfile);
+        if (!result.IsSuccessStatusCode)
+        {
+            Dispatcher.Invoke(
+                () => MessageBox.Show(this, $"Failed to read data {result.StatusCode}", "Internal error", MessageBoxButton.OK, MessageBoxImage.Error)
+            );
+            Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
+            return;
+        }
+        var resultContent = await result.Content.ReadAsStringAsync();
+        var responseData = JsonSerializer.Deserialize<ODataResponse<Dictionary<string, object>>>(resultContent);
+
+        if (responseData.value.Count <= 0)
+        {
+            Dispatcher.Invoke(
+                () => MessageBox.Show(this, $"No results", "No results", MessageBoxButton.OK, MessageBoxImage.Information)
+            );
+            Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
+            return;
+        }
+
+        PopulateDataGrid(responseData, cleanFetchXmlModel.Entity.Name, cleanFetchXmlModel);
+
+        Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
     }
 
     private void PopulateDataGrid(ODataResponse<Dictionary<string, object>> responseData, string mainEntityName, FetchXmlModel cleanFetchXmlModel)
@@ -358,33 +399,18 @@ public partial class MainWindow : Window
         return null;
     }
 
-    /*
     private async Task<FetchXmlModel?> GetFetchXmlModelFromAI(string prompt, IList<MetadataEmbedding> metadataEmbeddings)
     {
-        if (_options.Value.UseCompletionAPI)
-            _openAiCompletionsOptions!.Prompts[0] = _promptBuilder.Build(prompt, metadataEmbeddings);
-        else
-            _promptBuilder.Build(_openAiChatCompletionsOptions!.Messages, prompt, metadataEmbeddings);
+        var fetchXmlPrompt = new PromptBuilder();
+        fetchXmlPrompt.AddFetchXmlGrounding();
+        fetchXmlPrompt.AddUserProfile(_context.UserProfile);
+        fetchXmlPrompt.AddTablesMetadata(metadataEmbeddings);
+        fetchXmlPrompt.Add(prompt);
 
         Dispatcher.Invoke(() => _statusBarText.Text = $"Waiting for OpenAI's response");
 
-        string? openAiResponseContent = null;
-        if (_options.Value.UseCompletionAPI)
-        {
-            var openAiResponse = await OpenAIClient.GetCompletionsAsync(
-                               _options.Value.OpenApiModel, _openAiCompletionsOptions).ConfigureAwait(false);
-            if (openAiResponse != null && openAiResponse.Value != null && openAiResponse.Value.Choices != null && openAiResponse.Value.Choices.Count > 0)
-                openAiResponseContent = openAiResponse.Value.Choices[0].Text;
-        }
-        else
-        {
-            var openAiResponse = await OpenAIClient.GetChatCompletionsAsync(
-                _options.Value.OpenApiModel, _openAiChatCompletionsOptions).ConfigureAwait(false);
-            if (openAiResponse != null && openAiResponse.Value != null && openAiResponse.Value.Choices != null && openAiResponse.Value.Choices.Count > 0)
-                openAiResponseContent = openAiResponse.Value.Choices[0].Message.Content;
-        }
-
-        if (string.IsNullOrWhiteSpace(openAiResponseContent))
+        var fetchXmlResponse = await _aiClient.GetResponse(fetchXmlPrompt);
+        if (string.IsNullOrWhiteSpace(fetchXmlResponse))
         {
             Dispatcher.Invoke(
                 () => MessageBox.Show(this, "No completions returned from the OpenAI service", "No Response", MessageBoxButton.OK, MessageBoxImage.Error)
@@ -392,14 +418,14 @@ public partial class MainWindow : Window
             return null;
         }
 
-        Debug.WriteLine(openAiResponseContent);
+        Debug.WriteLine(fetchXmlResponse);
 
-        var fetchStart = openAiResponseContent.IndexOf("<fetch", StringComparison.OrdinalIgnoreCase);
-        var fetchEnd = openAiResponseContent.IndexOf("</fetch>", StringComparison.OrdinalIgnoreCase);
+        var fetchStart = fetchXmlResponse.IndexOf("<fetch", StringComparison.OrdinalIgnoreCase);
+        var fetchEnd = fetchXmlResponse.IndexOf("</fetch>", StringComparison.OrdinalIgnoreCase);
         if (fetchStart < 0 || fetchEnd < 0)
         {
             Dispatcher.Invoke(
-                () => MessageBox.Show(this, openAiResponseContent, "AI Resonse", 
+                () => MessageBox.Show(this, fetchXmlResponse, "AI Resonse", 
                 MessageBoxButton.OK, MessageBoxImage.Question)
             );
             Dispatcher.Invoke(() => _statusBarText.Text = ReadyMessage);
@@ -407,7 +433,7 @@ public partial class MainWindow : Window
         }
 
         // Read fetchxml
-        var fetchXmlFromOpenAI = openAiResponseContent.Substring(fetchStart, fetchEnd - fetchStart + "</fetch>".Length);
+        var fetchXmlFromOpenAI = fetchXmlResponse.Substring(fetchStart, fetchEnd - fetchStart + "</fetch>".Length);
         var readerSettings = new XmlReaderSettings() { IgnoreComments = true, IgnoreProcessingInstructions = true, IgnoreWhitespace = true };
         using var fileReader = new StringReader(fetchXmlFromOpenAI);
         using var xmlReader = XmlReader.Create(fileReader, readerSettings);
@@ -421,7 +447,6 @@ public partial class MainWindow : Window
             throw new VerbExecutionException(ex.Message, ex);
         }
     }
-    */
 
     protected override void OnClosing(CancelEventArgs e)
     {

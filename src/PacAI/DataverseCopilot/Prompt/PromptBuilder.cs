@@ -1,4 +1,5 @@
 ﻿using Azure.AI.OpenAI;
+using DataverseCopilot.Dialog;
 using DataverseCopilot.Extensions;
 using DataverseCopilot.Graph;
 using System.Text;
@@ -7,26 +8,17 @@ namespace DataverseCopilot.Prompt;
 
 internal class PromptBuilder
 {
-    public const string SystemPrompt =
-    @"
-                - You are an assistant who translates language to FetchXML query against Dataverse environment
-                - You can add most commonly used columns to the query
-                - You can use any FetchXML function, operator, attribute, table, entity
-                - You do not use all-attributes
-                - You can return only one query
-                - You can ask clarifying questions about which Dataverse table, attribute, etc. to use
-    ";
-    public const string TablesPromptPrefix = "User has following tables in addition to many others: ";
+    public const string TablesPromptPrefix = "I have following tables in addition to many others: ";
     public const string UserPromptPrefix = "Write a query which returns: ";
 
-    public PromptBuilder(bool addPersonalAssistantGrounding = false, bool addIntentGrounding = false, bool addConfirmationGrounding = false)
+    public PromptBuilder(bool addPersonalAssistantGrounding = false, bool addIntentGrounding = false)
     {
         if (addPersonalAssistantGrounding)
             AddPersonalAssistantGrounding();
         if (addIntentGrounding)
             AddIntentGrounding();
-        if (addConfirmationGrounding)
-            AddConfirmationGrounding();
+        if (addIntentGrounding)
+            AddIntentGrounding();
     }
 
     IList<ChatMessage> _messages = new List<ChatMessage>();
@@ -36,35 +28,6 @@ internal class PromptBuilder
         get {
             return _messages.Select(m => m.Content); 
         }
-    }
-
-    public string Build(string prompt, IList<MetadataEmbedding> metadataEmbeddings)
-    {
-        var completionPrompt = new StringBuilder();
-        completionPrompt.AppendLine(SystemPrompt);
-        //completionPrompt.AppendLine(UserProfilePrompt);
-        completionPrompt.AppendLine(TablesPromptPrefix);
-        foreach (var metadataEmbedding in metadataEmbeddings)
-        {
-            completionPrompt.Append(metadataEmbedding.Prompt);
-        }
-        completionPrompt.Append(UserPromptPrefix);
-        completionPrompt.Append($"{prompt}.{Environment.NewLine}");
-
-        return completionPrompt.ToString();
-    }
-
-    public void Build(IList<ChatMessage> messages, string prompt, IList<MetadataEmbedding> metadataEmbeddings)
-    {
-        messages.Clear();
-        messages.Add(new ChatMessage(ChatRole.System, SystemPrompt));
-        messages.Add(new ChatMessage(ChatRole.System, TablesPromptPrefix));
-        foreach (var metadataEmbedding in metadataEmbeddings)
-        {
-            messages.Add(new ChatMessage(ChatRole.System, metadataEmbedding.Prompt));
-        }
-        messages.Add(new ChatMessage(ChatRole.System, UserPromptPrefix));
-        messages.Add(new ChatMessage(ChatRole.User, $"{prompt}.{Environment.NewLine}"));
     }
 
     public void AddPersonalAssistantGrounding()
@@ -81,16 +44,39 @@ internal class PromptBuilder
         _messages.Add(new ChatMessage(ChatRole.System, $"Intent can be either a GET or a SET"));
         _messages.Add(new ChatMessage(ChatRole.System, $"GET - get, find, search, query more information, details, data"));
         _messages.Add(new ChatMessage(ChatRole.System, $"SET - perform an action such as send, save, delete, copy, move"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"GET can have source - Email, FileSystem, Dataverse, Calendar, Task"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"SET can have target - Email, FileSystem, Dataverse, Calendar, Task"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"you respond with intent:, source:, target:, filter:"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"GET can have {IntentResponse.SourceKey} {typeof(Resource).GetDescriptions()}"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"SET can have {IntentResponse.TargetKey} {typeof(Resource).GetDescriptions()}"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"you respond with {IntentResponse.IntentKey}, {IntentResponse.SourceKey}, {IntentResponse.TargetKey}, {IntentResponse.FilterKey}"));
+    }
+    public void AddFetchXmlGrounding()
+    {
+        _messages.Add(new ChatMessage(ChatRole.System, "You are an assistant who translates language to FetchXML query against Dataverse environment"));
+        _messages.Add(new ChatMessage(ChatRole.System, "You can add most commonly used columns to the query"));
+        _messages.Add(new ChatMessage(ChatRole.System, "You can use any FetchXML function, operator, attribute, table, entity"));
+        _messages.Add(new ChatMessage(ChatRole.System, "You do not use all-attributes"));
+        _messages.Add(new ChatMessage(ChatRole.System, "You can return only one query"));
+        _messages.Add(new ChatMessage(ChatRole.System, "FetchXML should be ready to execute without any custom operator values"));
+        _messages.Add(new ChatMessage(ChatRole.System, "You can ask clarifying questions about which Dataverse table, attribute, etc. to use"));
     }
 
-    public void AddConfirmationGrounding()
+    public void AddConfirmationGrounding(Resource? resource)
     {
-        _messages.Add(new ChatMessage(ChatRole.System, $"You an assistant who asks clarifying questions to confirm information"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"You need to confirm user's intent by asking questions"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"If information is correct you need ask what to next with it"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"You do not add greetings"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"You an assistant who asks user clarifying questions"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"You need to inquire about user's intent"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"You need to ask user what to do next"));
+        switch (resource)
+        {
+            case Resource.Email:
+                _messages.Add(new ChatMessage(ChatRole.System, $"User can do typical actions - read, send, recieve, delete, reply, or forward"));
+                _messages.Add(new ChatMessage(ChatRole.System, $"You need to summarize email"));
+                _messages.Add(new ChatMessage(ChatRole.System, $"You need to ask if email you found is correct"));
+                _messages.Add(new ChatMessage(ChatRole.System, $"You need to ask what to do with it next"));
+                break;
+        }
+        //_messages.Add(new ChatMessage(ChatRole.System, $"User can lookup, add, update, delete entries in Dataverse tables"));
+        //_messages.Add(new ChatMessage(ChatRole.System, $"User can view, schedule, decline caledndar events"));
+        //_messages.Add(new ChatMessage(ChatRole.System, $"User can view, create, complete, postpone tasks"));
     }
 
     public void AddToday()
@@ -149,8 +135,27 @@ internal class PromptBuilder
         if (message == null)
             return;
 
-        _messages.Add(new ChatMessage(ChatRole.System, $"You know:"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"{message.ReceivedDateTime.Value.LocalDateTime.ToRelativeSentence()} user got email from {message.From.EmailAddress.Name}"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"Subject: {message.Subject.CleanupSubject()}"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"User received {message.ReceivedDateTime.Value.LocalDateTime.ToRelativeSentence()} an email from {message.From.EmailAddress.Name}"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Email subject: {message.Subject.CleanupSubject()}"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Email preview: {message.BodyPreview}"));
+
+    }
+
+    internal void AddAssistantHistory(IList<ChatMessage> chatHistory)
+    {
+        foreach (var chatMessage in chatHistory)
+        {
+            _messages.Add(chatMessage);
+        }
+    }
+
+    public void AddTablesMetadata(IList<MetadataEmbedding> metadataEmbeddings)
+    {
+        _messages.Add(new ChatMessage(ChatRole.System, TablesPromptPrefix));
+        foreach (var metadataEmbedding in metadataEmbeddings)
+        {
+            _messages.Add(new ChatMessage(ChatRole.System, metadataEmbedding.Prompt));
+        }
+        _messages.Add(new ChatMessage(ChatRole.System, UserPromptPrefix));
     }
 }

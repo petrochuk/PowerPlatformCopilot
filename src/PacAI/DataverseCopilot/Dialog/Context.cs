@@ -3,15 +3,15 @@ using Azure.AI.OpenAI;
 using DataverseCopilot.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.SemanticKernel.AI.Embeddings.VectorOperations;
-using System;
 using System.Collections.Concurrent;
-using System.Text;
 using System.Threading.Tasks.Dataflow;
 
 namespace DataverseCopilot.Dialog;
 
 internal class Context
 {
+    #region Constructors
+
     OpenAIClient _openAIClient;
     AppSettings _appSettings;
 
@@ -37,7 +37,15 @@ internal class Context
         });
     }
 
+    #endregion
+
+    #region User
+
     public User? UserProfile { get; set; }
+
+    #endregion
+
+    #region Messages/Emails
 
     public ConcurrentDictionary<IReadOnlyList<float>, Message> Messages { get; private set; } = new ();
 
@@ -56,7 +64,6 @@ internal class Context
 
         var filterVector = embeddingFilter.Value.Data.First().Embedding.ToArray();
 
-        var similarities = new SortedList<double, MetadataEmbedding>();
         double highestSimilarity = double.MinValue;
         Message? mostRelevantMessage = null;
 
@@ -74,4 +81,31 @@ internal class Context
 
         return mostRelevantMessage;
     }
+
+    /// <summary>
+    /// Message confirmed by the user
+    /// </summary>
+    public Message? ConfirmedMessage { get; set; }
+
+    /// <summary>
+    /// Message suggested by the system
+    /// </summary>
+    public Message? SuggestedMessage { get; set; }
+
+    #endregion
+
+    #region Resource
+
+    /// <summary>
+    /// Current resource user is interacting with
+    /// </summary>
+    public Resource? CurrentResource { get; set; }
+
+    #endregion
+
+    #region Chat history
+
+    public List<Azure.AI.OpenAI.ChatMessage> ChatHistory { get; set; } = new();
+
+    #endregion
 }

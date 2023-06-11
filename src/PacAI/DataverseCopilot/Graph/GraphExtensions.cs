@@ -31,12 +31,10 @@ internal static class GraphExtensions
     {
         var sb = new StringBuilder();
 
-        sb.Append("From:");
         sb.AppendLine(message.From.EmailAddress.Name);
-        sb.Append("From email:");
         sb.AppendLine(message.From.EmailAddress.Address);
-        sb.Append("Subject:");
         sb.AppendLine(message.Subject.CleanupSubject());
+        sb.AppendLine(message.BodyPreview);
 
         return sb.ToString();
     }
