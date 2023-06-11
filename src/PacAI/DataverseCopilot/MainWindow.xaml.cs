@@ -16,6 +16,7 @@ using Microsoft.Graph.Models;
 using Microsoft.Graph.Models.ODataErrors;
 using Microsoft.Win32;
 using System.ComponentModel;
+using System.Formats.Asn1;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
@@ -181,13 +182,13 @@ public partial class MainWindow : Window
             _context.ChatHistory.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.User, prompt));
             var intentResponse = new IntentResponse(await _aiClient.GetResponse(intentPrompt));
 
-            switch (intentResponse.Intent)
+            switch (intentResponse.ResourceObject)
             {
-                case Intent.Get:
-                    GetIntent(intentResponse.Source.Value, intentResponse.Filter);
+                case Resource.Email:
+                    await ActOnEmail(intentResponse.Action, intentResponse.Filter);
                     break;
-                case Intent.Set:
-                    SetIntent(intentResponse.Target.Value, intentResponse.Filter);
+                case Resource.Dataverse:
+                    await ActOnDataverse(intentResponse.Action, intentResponse.Filter);
                     break;
             }
         }
@@ -198,26 +199,32 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task GetIntent(Resource source, string filter)
+    private async Task ActOnEmail(string action, string filter)
     {
-        switch (source)
+        switch (action.ToLowerInvariant())
         {
-            case Resource.Email:
+            case "get":
                 await GetEmail(filter);
                 break;
-            case Resource.Dataverse:
-                await GetDataverse(filter);
+            case "reply":
+                await ReplyEmail();
+                _context.SuggestedMessage = null;
+                break;
+            case "delete":
+                await _graphClient.Me.Messages[_context.SuggestedMessage.Id].DeleteAsync();
+                _context.SuggestedMessage = null;
                 break;
         }
     }
 
-    private async Task SetIntent(Resource target, string filter)
+    public async Task ReplyEmail()
     {
-        switch (target)
+        var replyAllBody = new Microsoft.Graph.Me.Messages.Item.ReplyAll.ReplyAllPostRequestBody()
         {
-            case Resource.Email:
-                break;
-        }
+            Comment = DataToHtml()
+        };
+
+        await _graphClient.Me.Messages[_context.SuggestedMessage.Id].ReplyAll.PostAsync(replyAllBody);
     }
 
     public async Task GetEmail(string filter)
@@ -228,11 +235,11 @@ public partial class MainWindow : Window
         confirmationPrompt.AddConfirmationGrounding(_context.CurrentResource);
         confirmationPrompt.Add(_context.SuggestedMessage);
         var confirmationResponse = await _aiClient.GetResponse(confirmationPrompt);
-        await _speechAssistant.Speak($"{confirmationResponse}.");
         _context.ChatHistory.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.Assistant, confirmationResponse));
+        await _speechAssistant.Speak($"{confirmationResponse}.");
     }
 
-    public async Task GetDataverse(string filter)
+    public async Task ActOnDataverse(string action, string filter)
     {
         if (string.IsNullOrWhiteSpace(filter))
             return;
@@ -490,5 +497,47 @@ public partial class MainWindow : Window
                 }
             }
         }
+    }
+
+    private string DataToHtml()
+    {
+        var html = new StringBuilder();
+        html.AppendLine("<html>");
+        html.AppendLine(@"
+<style>
+    table {
+        border-collapse: collapse;
+    }
+    td, th {
+        border: 1px solid black;
+    }
+</style>
+");
+        html.AppendLine("<body>");
+        html.AppendLine("<table>");
+        
+        // Header
+        html.AppendLine("<tr>");
+        foreach (var column in _gridView.Columns)
+        {
+            html.AppendLine($"<th>{column.Header}</th>");
+        }
+        html.AppendLine("</tr>");
+
+        foreach (var row in _listView.Items.Cast<DynamicRow>())
+        {
+            html.AppendLine("<tr>");
+            foreach (var column in _gridView.Columns)
+            {
+                html.AppendLine($"<th>{row.Get(((Binding)column.DisplayMemberBinding).Path.Path)}</th>");
+            }
+            html.AppendLine("</tr>");
+        }
+
+        html.AppendLine("</table>");
+        html.AppendLine("</body>");
+        html.AppendLine("</html>");
+
+        return html.ToString();
     }
 }

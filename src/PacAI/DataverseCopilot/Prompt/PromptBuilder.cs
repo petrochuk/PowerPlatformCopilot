@@ -41,12 +41,11 @@ internal class PromptBuilder
     public void AddIntentGrounding()
     {
         _messages.Add(new ChatMessage(ChatRole.System, $"You are an assistant who understands and extracts user intent"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"Intent can be either a GET or a SET"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"GET - get, find, search, query more information, details, data"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"SET - perform an action such as send, save, delete, copy, move"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"GET can have {IntentResponse.SourceKey} {typeof(Resource).GetDescriptions()}"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"SET can have {IntentResponse.TargetKey} {typeof(Resource).GetDescriptions()}"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"you respond with {IntentResponse.IntentKey}, {IntentResponse.SourceKey}, {IntentResponse.TargetKey}, {IntentResponse.FilterKey}"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Intent should be split into three parts"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Noun {IntentResponse.ObjectKey} {typeof(Resource).GetDescriptions()}"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Verb {IntentResponse.ActionKey} get, find, search, delete, reply, move, save, query, send etc"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Intent can have optional filter string for search queries"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"You respond with {IntentResponse.ObjectKey}, {IntentResponse.ActionKey}, {IntentResponse.FilterKey}"));
     }
     public void AddFetchXmlGrounding()
     {
