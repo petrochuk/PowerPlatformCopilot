@@ -116,7 +116,7 @@ public partial class MainWindow : Window
                 // q => { q.QueryParameters.Filter = "isRead eq false"; }
             );
 
-            var welcomePrompt = new PromptBuilder(addAssistantGrounding: true);
+            var welcomePrompt = new PromptBuilder(addPersonalAssistantGrounding: true);
             welcomePrompt.AddToday();
             welcomePrompt.AddUserProfile(_context.UserProfile);
             welcomePrompt.Avoid(_greetingHistory.Items);
@@ -125,7 +125,7 @@ public partial class MainWindow : Window
             var welcomeResponse = await _aiClient.GetResponse(welcomePrompt);
             _greetingHistory.Add(welcomeResponse);
 
-            var emailPrompt = new PromptBuilder(addAssistantGrounding: true);
+            var emailPrompt = new PromptBuilder(addPersonalAssistantGrounding: true);
             emailPrompt.Add($"Use following list of my emails: ");
             int emailCount = 0;
             var pageIterator = PageIterator<Message, MessageCollectionResponse>.CreatePageIterator(
@@ -160,12 +160,21 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(_prompt.Text))
             return;
 
+        var prompt = _prompt.Text;
+        _history.Items.Add(_prompt.Text);
+        Dispatcher.Invoke(() => _prompt.Text = string.Empty);
+
         var intentPrompt = new PromptBuilder(addIntentGrounding: true);
 
-        intentPrompt.Add(_prompt.Text);
+        intentPrompt.Add(prompt);
         var intentResponse = await _aiClient.GetResponse(intentPrompt);
 
         var message = await _context.FindRelevantMessage(intentResponse);
+
+        var confirmationPrompt = new PromptBuilder(addConfirmationGrounding: true);
+        confirmationPrompt.Add(message);
+        var confirmationResponse = await _aiClient.GetResponse(confirmationPrompt);
+        await _speechAssistant.Speak($"{confirmationResponse}.");
     }
 
     private async void Submit_Click_DV(object sender, RoutedEventArgs e)

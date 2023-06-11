@@ -1,4 +1,5 @@
 ﻿using Azure.AI.OpenAI;
+using DataverseCopilot.Extensions;
 using DataverseCopilot.Graph;
 using System.Text;
 
@@ -18,12 +19,14 @@ internal class PromptBuilder
     public const string TablesPromptPrefix = "User has following tables in addition to many others: ";
     public const string UserPromptPrefix = "Write a query which returns: ";
 
-    public PromptBuilder(bool addAssistantGrounding = false, bool addIntentGrounding = false)
+    public PromptBuilder(bool addPersonalAssistantGrounding = false, bool addIntentGrounding = false, bool addConfirmationGrounding = false)
     {
-        if (addAssistantGrounding)
-            AddAssistantGrounding();
+        if (addPersonalAssistantGrounding)
+            AddPersonalAssistantGrounding();
         if (addIntentGrounding)
             AddIntentGrounding();
+        if (addConfirmationGrounding)
+            AddConfirmationGrounding();
     }
 
     IList<ChatMessage> _messages = new List<ChatMessage>();
@@ -64,7 +67,7 @@ internal class PromptBuilder
         messages.Add(new ChatMessage(ChatRole.User, $"{prompt}.{Environment.NewLine}"));
     }
 
-    public void AddAssistantGrounding()
+    public void AddPersonalAssistantGrounding()
     {
         _messages.Add(new ChatMessage(ChatRole.System, $"You are my personal assistant"));
         _messages.Add(new ChatMessage(ChatRole.System, $"You help me with my daily tasks"));
@@ -83,43 +86,20 @@ internal class PromptBuilder
         _messages.Add(new ChatMessage(ChatRole.System, $"you respond with intent:, source:, target:, filter:"));
     }
 
+    public void AddConfirmationGrounding()
+    {
+        _messages.Add(new ChatMessage(ChatRole.System, $"You an assistant who asks clarifying questions to confirm information"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"You need to confirm user's intent by asking questions"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"If information is correct you need ask what to next with it"));
+    }
+
     public void AddToday()
     {
-        _messages.Add(new ChatMessage(ChatRole.System, $"Today is {TimeOfDay(DateTime.Now)} on {DateTime.Now.DayOfWeek}"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"It is {TimeOfYear(DateTime.Now)}"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Today is {DateTime.Now.ToTimeOfDay()} on {DateTime.Now.DayOfWeek}"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"It is {DateTime.Now.ToTimeOfYear()}"));
         _messages.Add(new ChatMessage(ChatRole.System, $"Year {DateTime.Now.Year}"));
         _messages.Add(new ChatMessage(ChatRole.System, $"Month {DateTime.Now:MMMM}"));
         _messages.Add(new ChatMessage(ChatRole.System, $"Day number {DateTime.Now.Day}"));
-    }
-
-    private string TimeOfDay(DateTime dateTime)
-    {
-        if (dateTime.Hour < 3)
-            return "night";
-        if (dateTime.Hour < 6)
-            return "early morning";
-        if (dateTime.Hour < 12)
-            return "morning";
-        if (dateTime.Hour < 17)
-            return "afternoon";
-        if (dateTime.Hour < 22)
-            return "night";
-
-        return "evening";
-    }
-
-    private string TimeOfYear(DateTime dateTime)
-    {
-        if (dateTime.Month < 3)
-            return "winter";
-        if (dateTime.Month < 6)
-            return "spring";
-        if (dateTime.Month < 9)
-            return "summer";
-        if (dateTime.Month < 12)
-            return "autumn";
-
-        return "winter";
     }
 
     public void AddUserProfile(Microsoft.Graph.Models.User? userProfile)
@@ -162,5 +142,15 @@ internal class PromptBuilder
         {
             _messages.Add(new ChatMessage(ChatRole.User, $"Say something different from: '{item.Text}'"));
         }
+    }
+
+    internal void Add(Microsoft.Graph.Models.Message message)
+    {
+        if (message == null)
+            return;
+
+        _messages.Add(new ChatMessage(ChatRole.System, $"You know:"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"{message.ReceivedDateTime.Value.LocalDateTime.ToRelativeSentence()} user got email from {message.From.EmailAddress.Name}"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Subject: {message.Subject.CleanupSubject()}"));
     }
 }

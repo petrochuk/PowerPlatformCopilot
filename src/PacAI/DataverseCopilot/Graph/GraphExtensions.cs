@@ -12,12 +12,16 @@ internal static class GraphExtensions
 
         while (true)
         {
-            if(subject.StartsWith("RE: ", StringComparison.OrdinalIgnoreCase))
-                subject = subject.Substring(4);
-            else if (subject.StartsWith("FW: ", StringComparison.OrdinalIgnoreCase))
-                subject = subject.Substring(4);
+            if(subject.StartsWith("RE:", StringComparison.OrdinalIgnoreCase))
+                subject = subject.Substring(3);
+            else if (subject.StartsWith("FW:", StringComparison.OrdinalIgnoreCase))
+                subject = subject.Substring(3);
+            else if (subject.StartsWith("[EXTERNAL]", StringComparison.OrdinalIgnoreCase))
+                subject = subject.Substring("[EXTERNAL]".Length);
             else
                 break;
+
+            subject = subject.TrimStart();
         }
 
         return subject;
