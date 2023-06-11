@@ -6,11 +6,13 @@ using bolt.module.copilot;
 using CsvHelper;
 using DataverseCopilot.AzureAI;
 using DataverseCopilot.Dialog;
+using DataverseCopilot.Graph;
 using DataverseCopilot.Prompt;
 using DataverseCopilot.TextToSpeech;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using Microsoft.Graph.Models.ODataErrors;
 using Microsoft.Win32;
 using System.ComponentModel;
@@ -25,6 +27,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Xml;
 using System.Xml.Serialization;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
 #endregion
 
 namespace DataverseCopilot;
@@ -44,13 +47,12 @@ public partial class MainWindow : Window
     XmlSerializer _fetchXmlModelSerializer = new XmlSerializer(typeof(FetchXmlModel));
     Dictionary<string, GridViewColumn>? _columnMap;
     GridView _gridView = new GridView();
-    ChatCompletionsOptions? _openAiChatCompletionsOptions;
-    CompletionsOptions? _openAiCompletionsOptions;
     MetadataEmbeddingCollection _metadataEmbeddingCollection;
     StringBuilder _userPromptHistory;
     PromptBuilder _promptBuilder;
     Context _context = new Context();
     Client _aiClient;
+    GreetingHistory _greetingHistory;
 
     ISpeechAssistant _speechAssistant;
 
@@ -73,6 +75,7 @@ public partial class MainWindow : Window
         _speechAssistant = App.ServiceProvider.GetRequiredService<ISpeechAssistant>();
 
         _metadataEmbeddingCollection = MetadataEmbeddingCollection.Load(_options.Value);
+        _greetingHistory = GreetingHistory.Load();
         //_metadataEmbeddingCollection.Refresh();
 
         _aiClient = new Client(_options);
@@ -108,16 +111,39 @@ public partial class MainWindow : Window
         try
         {
             _context.UserProfile = await _graphClient.Me.GetAsync();
-            var welcomePrompt = new PromptBuilder();
+            var inbox = await _graphClient.Me.MailFolders["Inbox"].GetAsync();
+            var emails = await _graphClient.Me.MailFolders["Inbox"].Messages.GetAsync(
+                q => { q.QueryParameters.Top = 10; }
+                // q => { q.QueryParameters.Filter = "isRead eq false"; }
+            );
 
-            welcomePrompt.Add("Use following context: ");
+            var welcomePrompt = new PromptBuilder();
             welcomePrompt.AddToday();
             welcomePrompt.AddUserProfile(_context.UserProfile);
-            welcomePrompt.Add("Write short greeting for today: ");
+            welcomePrompt.Avoid(_greetingHistory.Items);
+            welcomePrompt.Add("Hello assistant.");
 
             var response = await _aiClient.GetResponse(welcomePrompt);
-
+            _greetingHistory.Add(response);
             await _speechAssistant.Speak($"{response}");
+
+            var emailPrompt = new PromptBuilder();
+            emailPrompt.Add($"Use following list of my emails: ");
+            int emailCount = 0;
+            var pageIterator = PageIterator<Message, MessageCollectionResponse>.CreatePageIterator(
+            _graphClient, emails,
+            (m) =>
+            {
+                emailCount++;
+                emailPrompt.Add($"From: {m.From.EmailAddress.Name}");
+                emailPrompt.Add($"Subject: {m.Subject.CleanupSubject()}");
+                return true;
+            });
+            await pageIterator.IterateAsync();
+
+            emailPrompt.Add($"Give me a short summary about my emails. Don't talk about each one: ");
+            var emailResponse = await _aiClient.GetResponse(emailPrompt);
+            await _speechAssistant.Speak($"{emailResponse}");
         }
         catch (ODataError ex) when (ex.Error != null)
         {
@@ -253,7 +279,7 @@ public partial class MainWindow : Window
                         entityMetadataModel.AttributesDictionary.TryGetValue(column.Key, out attributeMetadataModel);
                 }
 
-                if (attributeMetadataModel != null && attributeMetadataModel.AttributeType == AttributeType.Uniqueidentifier)
+                if (attributeMetadataModel != null && attributeMetadataModel.AttributeType == bolt.dataverse.model.AttributeType.Uniqueidentifier)
                     continue;
 
                 if (!_columnMap.ContainsKey(column.Key))
@@ -267,7 +293,7 @@ public partial class MainWindow : Window
                     {
                         switch (attributeMetadataModel.AttributeType)
                         {
-                            case AttributeType.Money:
+                            case bolt.dataverse.model.AttributeType.Money:
                                 columnFormat = $"{{0:c}}";
                                 break;
                         }

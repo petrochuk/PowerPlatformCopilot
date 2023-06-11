@@ -1,4 +1,5 @@
 ﻿using Azure.AI.OpenAI;
+using DataverseCopilot.Graph;
 using System.Text;
 
 namespace DataverseCopilot.Prompt;
@@ -17,12 +18,17 @@ internal class PromptBuilder
     public const string TablesPromptPrefix = "User has following tables in addition to many others: ";
     public const string UserPromptPrefix = "Write a query which returns: ";
 
+    public PromptBuilder()
+    {
+        AddAssistantGrounding();
+    }
+
     IList<ChatMessage> _messages = new List<ChatMessage>();
 
     public IList<ChatMessage> ChatMessages => _messages;
     public IEnumerable<string> Messages {
         get {
-            return _messages.Select<ChatMessage, string>(m => m.Content); 
+            return _messages.Select(m => m.Content); 
         }
     }
 
@@ -46,7 +52,6 @@ internal class PromptBuilder
     {
         messages.Clear();
         messages.Add(new ChatMessage(ChatRole.System, SystemPrompt));
-        //messages.Add(new ChatMessage(ChatRole.System, UserProfilePrompt));
         messages.Add(new ChatMessage(ChatRole.System, TablesPromptPrefix));
         foreach (var metadataEmbedding in metadataEmbeddings)
         {
@@ -54,6 +59,14 @@ internal class PromptBuilder
         }
         messages.Add(new ChatMessage(ChatRole.System, UserPromptPrefix));
         messages.Add(new ChatMessage(ChatRole.User, $"{prompt}.{Environment.NewLine}"));
+    }
+
+    public void AddAssistantGrounding()
+    {
+        _messages.Add(new ChatMessage(ChatRole.System, $"You are my personal assistant"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"You help me with my daily tasks"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"You provide me with useful and actionable information"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Your responses are short"));
     }
 
     public void AddToday()
@@ -95,29 +108,27 @@ internal class PromptBuilder
         return "winter";
     }
 
-    public void AddUserProfile(Microsoft.Graph.Models.User? userProfile, bool addAssisting = true)
+    public void AddUserProfile(Microsoft.Graph.Models.User? userProfile)
     {
         if (userProfile == null)
             return;
 
-        if (addAssisting)
-            _messages.Add(new ChatMessage(ChatRole.System, "You are assisting following person:"));
         if (!string.IsNullOrWhiteSpace(userProfile.DisplayName))
-            _messages.Add(new ChatMessage(ChatRole.System, $"Name: {userProfile.DisplayName}"));
+            _messages.Add(new ChatMessage(ChatRole.System, $"My Name: {userProfile.DisplayName}"));
         if (!string.IsNullOrWhiteSpace(userProfile.GivenName))
-            _messages.Add(new ChatMessage(ChatRole.System, $"Given name: {userProfile.GivenName}"));
+            _messages.Add(new ChatMessage(ChatRole.System, $"My Given name: {userProfile.GivenName}"));
         if (!string.IsNullOrWhiteSpace(userProfile.Surname))
-            _messages.Add(new ChatMessage(ChatRole.System, $"Surname: {userProfile.Surname}"));
+            _messages.Add(new ChatMessage(ChatRole.System, $"My Surname: {userProfile.Surname}"));
         if (!string.IsNullOrWhiteSpace(userProfile.Mail))
-            _messages.Add(new ChatMessage(ChatRole.System, $"email: {userProfile.Mail}"));
+            _messages.Add(new ChatMessage(ChatRole.System, $"My email: {userProfile.Mail}"));
         if (!string.IsNullOrWhiteSpace(userProfile.UserPrincipalName))
-            _messages.Add(new ChatMessage(ChatRole.System, $"User principal name: {userProfile.UserPrincipalName}"));
+            _messages.Add(new ChatMessage(ChatRole.System, $"My User principal name: {userProfile.UserPrincipalName}"));
         if (!string.IsNullOrWhiteSpace(userProfile.MobilePhone))
-            _messages.Add(new ChatMessage(ChatRole.System, $"Mobile phone: {userProfile.MobilePhone}"));
+            _messages.Add(new ChatMessage(ChatRole.System, $"My Mobile phone: {userProfile.MobilePhone}"));
         if (!string.IsNullOrWhiteSpace(userProfile.JobTitle))
-            _messages.Add(new ChatMessage(ChatRole.System, $"Job title: {userProfile.JobTitle}"));
+            _messages.Add(new ChatMessage(ChatRole.System, $"My Job title: {userProfile.JobTitle}"));
         if (!string.IsNullOrWhiteSpace(userProfile.OfficeLocation))
-            _messages.Add(new ChatMessage(ChatRole.System, $"Office location: {userProfile.OfficeLocation}"));
+            _messages.Add(new ChatMessage(ChatRole.System, $"My Office location: {userProfile.OfficeLocation}"));
     }
 
     internal void Add(string text)
@@ -126,5 +137,16 @@ internal class PromptBuilder
             return;
 
         _messages.Add(new ChatMessage(ChatRole.User, text));
+    }
+
+    internal void Avoid(IList<GreetingHistory.Item> items)
+    {
+        if (items == null || items.Count == 0)
+            return;
+
+        foreach (var item in items)
+        {
+            _messages.Add(new ChatMessage(ChatRole.User, $"Say something different from: '{item.Text}'"));
+        }
     }
 }

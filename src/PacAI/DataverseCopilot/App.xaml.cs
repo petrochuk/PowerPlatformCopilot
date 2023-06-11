@@ -104,5 +104,19 @@ namespace DataverseCopilot
 #endif
             return builder.Build();
         }
+
+        public static string DataFolder
+        {
+            get
+            {
+                var dataFolder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    Assembly.GetExecutingAssembly().GetName().Name!);
+                if (!Directory.Exists(dataFolder))
+                    Directory.CreateDirectory(dataFolder);
+                
+                return dataFolder;
+            }
+        }
     }
 }

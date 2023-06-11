@@ -3,8 +3,7 @@ using Azure.AI.OpenAI;
 using DataverseCopilot.Extensions;
 using DataverseCopilot.Prompt;
 using Microsoft.Extensions.Options;
-using System.Linq;
-using static System.Windows.Forms.Design.AxImporter;
+using System.Text;
 
 namespace DataverseCopilot.AzureAI;
 
@@ -12,8 +11,6 @@ internal class Client
 {
     AppSettings _appSettings;
     OpenAIClient _openAIClient;
-    ChatCompletionsOptions _chatOptions;
-    CompletionsOptions _completionOptions;
 
     public Client(IOptions<AppSettings> pacAppSettings)
     {
@@ -27,15 +24,6 @@ internal class Client
         _openAIClient = new OpenAIClient(
             new Uri(_appSettings.OpenApiEndPoint),
             new AzureKeyCredential(_appSettings.OpenApiKey));
-
-        _chatOptions = new ChatCompletionsOptions()
-        {
-            Temperature = 0f,
-            MaxTokens = 2000,
-            NucleusSamplingFactor = 0f,
-            FrequencyPenalty = 0,
-            PresencePenalty = 0,
-        };
     }
 
     public async Task<string> GetResponse(PromptBuilder prompt)
@@ -44,14 +32,19 @@ internal class Client
         {
             var completionOptions = new CompletionsOptions()
             {
-                Temperature = 0f,
-                MaxTokens = 2000,
-                NucleusSamplingFactor = 0f,
+                Temperature = 1,
+                MaxTokens = 1000,
+                NucleusSamplingFactor = 0.5f,
                 FrequencyPenalty = 0,
                 PresencePenalty = 0,
-                LogProbabilityCount = 20,
+                GenerationSampleCount = 1,
             };
-            completionOptions.Prompts.AddRange(prompt.Messages);
+            var promptText = new StringBuilder();
+            foreach (var message in prompt.Messages)
+            {
+                promptText.AppendLine(message);
+            }
+            completionOptions.Prompts.Add(promptText.ToString());
 
             var openAiResponse = await _openAIClient.GetCompletionsAsync(
                 _appSettings.OpenApiModel, completionOptions).ConfigureAwait(false);
