@@ -502,25 +502,14 @@ public partial class MainWindow : Window
     private string DataToHtml()
     {
         var html = new StringBuilder();
-        html.AppendLine("<html>");
-        html.AppendLine(@"
-<style>
-    table {
-        border-collapse: collapse;
-    }
-    td, th {
-        border: 1px solid black;
-    }
-</style>
-");
-        html.AppendLine("<body>");
-        html.AppendLine("<table>");
+
+        html.AppendLine("<table style='border-collapse: collapse;'>");
         
         // Header
         html.AppendLine("<tr>");
         foreach (var column in _gridView.Columns)
         {
-            html.AppendLine($"<th>{column.Header}</th>");
+            html.AppendLine($"<th style='border: 1px solid black;'>{column.Header}</th>");
         }
         html.AppendLine("</tr>");
 
@@ -529,14 +518,12 @@ public partial class MainWindow : Window
             html.AppendLine("<tr>");
             foreach (var column in _gridView.Columns)
             {
-                html.AppendLine($"<th>{row.Get(((Binding)column.DisplayMemberBinding).Path.Path)}</th>");
+                html.AppendLine($"<td style='border: 1px solid black;'>{row.Get(((Binding)column.DisplayMemberBinding).Path.Path)}</td>");
             }
             html.AppendLine("</tr>");
         }
 
         html.AppendLine("</table>");
-        html.AppendLine("</body>");
-        html.AppendLine("</html>");
 
         return html.ToString();
     }
