@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualBasic;
+using System.CodeDom;
 using System.ComponentModel;
 using System.Reflection;
 
@@ -21,10 +22,10 @@ namespace DataverseCopilot.Extensions
             return source.ToString();
         }
 
-        public static List<string>? GetListOfDescriptions(this Type source)
+        public static List<string> GetListOfDescriptions(this Type source)
         {
             if (!source.IsEnum)
-                return null;
+                throw new InvalidOperationException($"Only supported on Enums. Actual type: {source}");
 
             return Enum.GetValues(source).Cast<Enum>().Select(x => x.DescriptionAttr()).ToList();
         }
@@ -32,8 +33,6 @@ namespace DataverseCopilot.Extensions
         public static string GetDescriptions(this Type source)
         {
             var list = source.GetListOfDescriptions();
-            if (list == null)
-                return string.Empty;
 
             return string.Join(",", list);
         }

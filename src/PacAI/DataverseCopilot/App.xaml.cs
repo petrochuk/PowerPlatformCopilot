@@ -63,7 +63,7 @@ namespace DataverseCopilot
             services.AddSingleton(new AuthOptions());
             services.AddSingleton(new MsalLoggingOptions
             {
-                MinLogLevel = Microsoft.Extensions.Logging.LogLevel.Trace, // Enable Trace, but our NLog config will apply the actual filter
+                MinLogLevel = LogLevel.Trace, // Enable Trace, but our NLog config will apply the actual filter
                 EnablePiiLogging = true,
             });
             services.AddSingleton<IEnvirons, Environs>();

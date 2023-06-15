@@ -7,6 +7,7 @@ using CsvHelper;
 using DataverseCopilot.AzureAI;
 using DataverseCopilot.Dialog;
 using DataverseCopilot.Graph;
+using DataverseCopilot.Intent;
 using DataverseCopilot.Prompt;
 using DataverseCopilot.TextToSpeech;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,7 +50,6 @@ public partial class MainWindow : Window
     Dictionary<string, GridViewColumn>? _columnMap;
     GridView _gridView = new GridView();
     MetadataEmbeddingCollection _metadataEmbeddingCollection;
-    StringBuilder _userPromptHistory;
     Context _context;
     Client _aiClient;
     GreetingHistory _greetingHistory;
@@ -90,7 +90,6 @@ public partial class MainWindow : Window
         _listView.Items.Clear();
         _history.Items.Clear();
         Dispatcher.Invoke(() => _prompt.Text = string.Empty);
-        _userPromptHistory = new();
 
         Dispatcher.Invoke(() => _statusBarText.Text = ReadyInitialMessage);
     }
@@ -176,20 +175,21 @@ public partial class MainWindow : Window
             _history.Items.Add(_prompt.Text);
             Dispatcher.Invoke(() => _prompt.Text = string.Empty);
 
-            var intentPrompt = new PromptBuilder(addIntentGrounding: true);
+            var intentPrompt = new PromptBuilder();
+            intentPrompt.AddIntentGrounding(_context.ResourceKeys);
             intentPrompt.AddAssistantHistory(_context.ChatHistory);
             intentPrompt.Add(prompt);
             _context.ChatHistory.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.User, prompt));
-            var intentResponse = new IntentResponse(await _aiClient.GetResponse(intentPrompt));
+            var intentResponse = new IntentResponse(await _aiClient.GetResponse(intentPrompt), _context.Resources);
+            var action = await _context.FindBestAction(intentResponse);
 
-            switch (intentResponse.ResourceObject)
+            if (string.Compare(intentResponse.ResourceObject.Name, Resource.Email.Name, StringComparison.OrdinalIgnoreCase) == 0)
             {
-                case Resource.Email:
-                    await ActOnEmail(intentResponse.Action, intentResponse.Filter);
-                    break;
-                case Resource.Dataverse:
-                    await ActOnDataverse(intentResponse.Action, intentResponse.Filter);
-                    break;
+                await ActOnEmail(action, intentResponse.Filter);
+            }
+            else if (string.Compare(intentResponse.ResourceObject.Name, Resource.Email.Name, StringComparison.OrdinalIgnoreCase) == 0)
+            { 
+                await ActOnDataverse(intentResponse.Action, intentResponse.Filter);
             }
         }
         catch (Exception ex)
@@ -199,18 +199,18 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task ActOnEmail(string action, string filter)
+    private async Task ActOnEmail(IntentAction action, string filter)
     {
-        switch (action.ToLowerInvariant())
+        switch (action.Name)
         {
-            case "get":
+            case IntentAction.Details:
                 await GetEmail(filter);
                 break;
-            case "reply":
+            case IntentAction.EmailReply:
                 await ReplyEmail();
                 _context.SuggestedMessage = null;
                 break;
-            case "delete":
+            case IntentAction.EmailDelete:
                 await _graphClient.Me.Messages[_context.SuggestedMessage.Id].DeleteAsync();
                 _context.SuggestedMessage = null;
                 break;

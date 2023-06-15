@@ -2,6 +2,7 @@
 using DataverseCopilot.Dialog;
 using DataverseCopilot.Extensions;
 using DataverseCopilot.Graph;
+using Microsoft.VisualBasic;
 using System.Text;
 
 namespace DataverseCopilot.Prompt;
@@ -11,14 +12,10 @@ internal class PromptBuilder
     public const string TablesPromptPrefix = "I have following tables in addition to many others: ";
     public const string UserPromptPrefix = "Write a query which returns: ";
 
-    public PromptBuilder(bool addPersonalAssistantGrounding = false, bool addIntentGrounding = false)
+    public PromptBuilder(bool addPersonalAssistantGrounding = false)
     {
         if (addPersonalAssistantGrounding)
             AddPersonalAssistantGrounding();
-        if (addIntentGrounding)
-            AddIntentGrounding();
-        if (addIntentGrounding)
-            AddIntentGrounding();
     }
 
     IList<ChatMessage> _messages = new List<ChatMessage>();
@@ -38,15 +35,16 @@ internal class PromptBuilder
         _messages.Add(new ChatMessage(ChatRole.System, $"Your responses are short"));
     }
 
-    public void AddIntentGrounding()
+    public void AddIntentGrounding(IReadOnlyCollection<string> resourceNames)
     {
-        _messages.Add(new ChatMessage(ChatRole.System, $"You are an assistant who understands and extracts user intent"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"You are an assistant who understands and extracts latest user intent"));
         _messages.Add(new ChatMessage(ChatRole.System, $"Intent should be split into three parts"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"Noun {IntentResponse.ObjectKey} {typeof(Resource).GetDescriptions()}"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"Verb {IntentResponse.ActionKey} get, find, search, delete, reply, move, save, query, send etc"));
-        _messages.Add(new ChatMessage(ChatRole.System, $"Intent can have optional filter string for search queries"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"First, object or list of objects to perform action on {IntentResponse.ObjectKey} {string.Join(",", resourceNames)}"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Second, {IntentResponse.ActionKey} to perform on object or list of objects"));
+        _messages.Add(new ChatMessage(ChatRole.System, $"Third, optional object filter string for search queries"));
         _messages.Add(new ChatMessage(ChatRole.System, $"You respond with {IntentResponse.ObjectKey}, {IntentResponse.ActionKey}, {IntentResponse.FilterKey}"));
     }
+
     public void AddFetchXmlGrounding()
     {
         _messages.Add(new ChatMessage(ChatRole.System, "You are an assistant who translates language to FetchXML query against Dataverse environment"));
@@ -64,14 +62,13 @@ internal class PromptBuilder
         _messages.Add(new ChatMessage(ChatRole.System, $"You an assistant who asks user clarifying questions"));
         _messages.Add(new ChatMessage(ChatRole.System, $"You need to inquire about user's intent"));
         _messages.Add(new ChatMessage(ChatRole.System, $"You need to ask user what to do next"));
-        switch (resource)
+
+        if (resource != null && string.Compare(resource.Name, Resource.Email.Name, StringComparison.OrdinalIgnoreCase) == 0)
         {
-            case Resource.Email:
-                _messages.Add(new ChatMessage(ChatRole.System, $"User can do typical actions - read, send, recieve, delete, reply, or forward"));
-                _messages.Add(new ChatMessage(ChatRole.System, $"You need to summarize email"));
-                _messages.Add(new ChatMessage(ChatRole.System, $"You need to ask if email you found is correct"));
-                _messages.Add(new ChatMessage(ChatRole.System, $"You need to ask what to do with it next"));
-                break;
+            _messages.Add(new ChatMessage(ChatRole.System, $"User can do typical actions - read, send, recieve, delete, reply, or forward"));
+            _messages.Add(new ChatMessage(ChatRole.System, $"You need to summarize email"));
+            _messages.Add(new ChatMessage(ChatRole.System, $"You need to ask if email you found is correct"));
+            _messages.Add(new ChatMessage(ChatRole.System, $"You need to ask what to do with it next"));
         }
         //_messages.Add(new ChatMessage(ChatRole.System, $"User can lookup, add, update, delete entries in Dataverse tables"));
         //_messages.Add(new ChatMessage(ChatRole.System, $"User can view, schedule, decline caledndar events"));

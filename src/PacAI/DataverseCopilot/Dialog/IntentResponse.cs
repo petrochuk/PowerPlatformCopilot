@@ -1,21 +1,21 @@
 ﻿namespace DataverseCopilot.Dialog;
 
-[DebuggerDisplay("{Action} {ResourceObject.ToString()} flt:{Filter}")]
+[DebuggerDisplay("{Action} {ResourceObject.Name} filter:{Filter}")]
 public class IntentResponse
 {
     public const string ObjectKey = "object:";
     public const string FilterKey = "filter:";
     public const string ActionKey = "action:";
 
-    public IntentResponse(string response)
+    public IntentResponse(string response, IReadOnlyCollection<Resource> resources)
     {
         if (string.IsNullOrWhiteSpace(response))
             throw new ArgumentNullException(nameof(response));
 
-        foreach (var resource in Enum.GetValues<Resource>())
+        foreach (var resource in resources)
         {
-            if (response.Contains($"{ObjectKey} {resource}", StringComparison.OrdinalIgnoreCase) ||
-                response.Contains($"{ObjectKey}{resource}", StringComparison.OrdinalIgnoreCase))
+            if (response.Contains($"{ObjectKey} {resource.Name}", StringComparison.OrdinalIgnoreCase) ||
+                response.Contains($"{ObjectKey}{resource.Name}", StringComparison.OrdinalIgnoreCase))
             {
                 ResourceObject = resource;
             }
