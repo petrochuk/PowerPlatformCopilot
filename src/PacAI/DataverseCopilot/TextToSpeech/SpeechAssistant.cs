@@ -31,7 +31,7 @@ public class SpeechAssistant : ISpeechAssistant
         await _speechSynthesizer.SpeakSsmlAsync(FormatSsml(text));
     }
 
-    private string FormatSsml(string text, SpeechStyle speechStyle = SpeechStyle.Friendly)
+    private string FormatSsml(string text, SpeechStyle speechStyle = SpeechStyle.Whispering)
     {
         return @$"
         <speak version='1.0' xmlns='https://www.w3.org/2001/10/synthesis' xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>

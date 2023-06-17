@@ -37,7 +37,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="7.0.1" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Graph" Version="5.13.0" />
+    <PackageReference Include="Microsoft.Graph" Version="5.14.0" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.54.1" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="0.15.230609.2-preview" />
   </ItemGroup>

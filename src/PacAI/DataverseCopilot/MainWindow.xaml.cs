@@ -9,6 +9,7 @@ using DataverseCopilot.Dialog;
 using DataverseCopilot.Graph;
 using DataverseCopilot.Intent;
 using DataverseCopilot.Prompt;
+using DataverseCopilot.Resources.Email;
 using DataverseCopilot.TextToSpeech;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -115,7 +116,7 @@ public partial class MainWindow : Window
                 q => 
                 { 
                     q.QueryParameters.Top = 10; 
-                    q.QueryParameters.Filter = "isRead eq false";
+                    //q.QueryParameters.Filter = "isRead eq false";
                 }
             );
 
@@ -123,7 +124,7 @@ public partial class MainWindow : Window
             welcomePrompt.AddToday();
             welcomePrompt.AddUserProfile(_context.UserProfile);
             welcomePrompt.Avoid(_greetingHistory.Items);
-            welcomePrompt.Add("Hello assistant.");
+            welcomePrompt.Add("Write short greeting:");
 
             var welcomeResponse = await _aiClient.GetResponse(welcomePrompt);
             welcomeResponse = welcomeResponse.Replace($", {_context.UserProfile.GivenName}!", $" {_context.UserProfile.GivenName}!");
@@ -211,10 +212,44 @@ public partial class MainWindow : Window
                 _context.SuggestedMessage = null;
                 break;
             case IntentAction.EmailDelete:
-                await _graphClient.Me.Messages[_context.SuggestedMessage.Id].DeleteAsync();
-                _context.SuggestedMessage = null;
+                if (_context.SuggestedMessage != null)
+                {
+                    await _graphClient.Me.Messages[_context.SuggestedMessage.Id].DeleteAsync();
+                    _context.SuggestedMessage = null;
+                }
+                else if (_context.Iterator != null)
+                {
+                    await _graphClient.Me.Messages[((EmailIterator)_context.Iterator).CurrentMessage.Id].DeleteAsync();
+                    await IterateEmails();
+                }
+                break;
+            case IntentAction.Iterate:
+                await IterateEmails(filter);
                 break;
         }
+    }
+
+    public async Task IterateEmails(string filter = null)
+    {
+        if (_context.Iterator == null)
+        {
+            _context.Iterator = new EmailIterator(_graphClient)
+            {
+                Filter = filter
+            };
+        }
+
+        if (!await _context.Iterator.Next())
+        {
+            // TODO: No more emails
+        }
+
+        var confirmationPrompt = new PromptBuilder();
+        confirmationPrompt.AddConfirmationGrounding(Resource.Email);
+        confirmationPrompt.Add(((EmailIterator)_context.Iterator).CurrentMessage);
+        var confirmationResponse = await _aiClient.GetResponse(confirmationPrompt);
+        _context.ChatHistory.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.Assistant, confirmationResponse));
+        await _speechAssistant.Speak($"{confirmationResponse}.");
     }
 
     public async Task ReplyEmail()

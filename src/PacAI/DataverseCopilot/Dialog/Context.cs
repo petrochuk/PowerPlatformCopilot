@@ -19,7 +19,7 @@ internal class Context
     Dictionary<string, Resource> _resources;
     readonly OpenAIClient _embeddingsClient;
     readonly AppSettings _appSettings;
-    Iterator _iterator;
+    Iterator? _iterator;
 
     public Context(AppSettings appSettings)
     {
@@ -224,6 +224,15 @@ internal class Context
     /// Current resource user is interacting with
     /// </summary>
     public Resource? CurrentResource { get; set; }
+
+    public Iterator? Iterator
+    {
+        get => _iterator;
+        set
+        {
+            _iterator = value;
+        }
+    }
 
     #endregion
 
