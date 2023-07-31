@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PowerAppGenerator.MainPage">
+
+    <VerticalStackLayout
+        Spacing="25"
+        Padding="30,0"
+        VerticalOptions="Center">
+
+        <HorizontalStackLayout>
+            <Image
+                Source="copilot.png"
+                SemanticProperties.Description="Copilot Icon"
+                HeightRequest="50"
+                HorizontalOptions="Center" />
+            <Label
+                Text="Describe what your app should do:"
+                SemanticProperties.HeadingLevel="Level1"
+                FontSize="32" Padding="15"
+                VerticalOptions="Center" />
+
+        </HorizontalStackLayout>
+
+        <Editor x:Name="_prompt" HeightRequest="150" />
+
+        <Button
+            x:Name="_generate"
+            Text="Generate"
+            SemanticProperties.Hint="Generate PowerApp"
+            Clicked="OnGenerateClicked"
+            HorizontalOptions="Center" />
+
+    <Label x:Name="_progress" HeightRequest="150" />
+
+    </VerticalStackLayout>
+
+</ContentPage>

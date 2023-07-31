@@ -1,0 +1,124 @@
+﻿namespace PowerAppGenerator.AppModel;
+
+public class TextInput : ControlInfo
+{
+    public TextInput(string name) : base (name)
+    {
+        Template = new Template
+        {
+            Id = "http://microsoft.com/appmagic/text",
+            Version = "2.3.2",
+            LastModifiedTimestamp = "0",
+            Name = "text",
+            FirstParty = true,
+            IsPremiumPcfControl = false,
+            IsCustomGroupControlTemplate = false,
+            CustomGroupControlTemplateName = "",
+            IsComponentDefinition = false,
+            OverridableProperties = new OverridableProperties()
+        };
+
+        HasDynamicProperties = true;
+        DynamicProperties = new()
+        {
+            new DynamicProperty()
+            {
+                PropertyName = "FillPortions",
+                ControlPropertyState = "FillPortions",
+                Rule = new Rule()
+                {
+                    Property = "FillPortions",
+                    InvariantScript = "0"
+                }
+            },
+            new DynamicProperty()
+            {
+                PropertyName = "AlignInContainer",
+                ControlPropertyState = "AlignInContainer",
+                Rule = new Rule()
+                {
+                    Property = "AlignInContainer",
+                    InvariantScript = "AlignInContainer.Stretch"
+                }
+            },
+            new DynamicProperty()
+            {
+                PropertyName = "LayoutMinWidth",
+                ControlPropertyState = "LayoutMinWidth",
+                Rule = new Rule()
+                {
+                    Property = "LayoutMinWidth",
+                    InvariantScript = "150"
+                }
+            },
+            new DynamicProperty()
+            {
+                PropertyName = "LayoutMinHeight",
+                ControlPropertyState = "LayoutMinHeight",
+                Rule = new Rule()
+                {
+                    Property = "LayoutMinHeight",
+                    InvariantScript = "50"
+                }
+            }
+        };
+
+        StyleName = "defaultTextStyle";
+
+        AddRulesAndPropState();
+    }
+
+    private void AddRulesAndPropState()
+    {
+        Rules.Add(new Rule { Property = "Default", Category = "Data", InvariantScript = "" });
+        Rules.Add(new Rule { Property = "DelayOutput", Category = "Data", InvariantScript = "false" });
+        Rules.Add(new Rule { Property = "Mode", InvariantScript = "TextMode.SingleLine" });
+        Rules.Add(new Rule { Property = "Format", InvariantScript = "TextFormat.Text" });
+        Rules.Add(new Rule { Property = "VirtualKeyboardMode", InvariantScript = "VirtualKeyboardMode.Auto" });
+        Rules.Add(new Rule { Property = "BorderColor", InvariantScript = "RGBA(0, 18, 107, 1)" });
+        Rules.Add(new Rule { Property = "DisabledBorderColor", InvariantScript = "RGBA(166, 166, 166, 1)" });
+        Rules.Add(new Rule { Property = "PressedBorderColor", InvariantScript = "Self.HoverBorderColor", });
+        Rules.Add(new Rule { Property = "HoverBorderColor", InvariantScript = "RGBA(0, 18, 107, 1)" });
+        Rules.Add(new Rule { Property = "BorderStyle", InvariantScript = "BorderStyle.Solid" });
+        Rules.Add(new Rule { Property = "FocusedBorderColor", InvariantScript = "Self.BorderColor" });
+        Rules.Add(new Rule { Property = "Color", InvariantScript = "RGBA(0, 0, 0, 1)" });
+        Rules.Add(new Rule { Property = "DisabledColor", InvariantScript = "RGBA(166, 166, 166, 1)" });
+        Rules.Add(new Rule { Property = "PressedColor", InvariantScript = "Self.Color" });
+        Rules.Add(new Rule { Property = "HoverColor", InvariantScript = "RGBA(0, 0, 0, 1)" });
+        Rules.Add(new Rule { Property = "Fill", InvariantScript = "RGBA(255, 255, 255, 1)" });
+        Rules.Add(new Rule { Property = "DisabledFill", InvariantScript = "RGBA(244, 244, 244, 1)" });
+        Rules.Add(new Rule { Property = "PressedFill", InvariantScript = "Self.Fill" });
+        Rules.Add(new Rule { Property = "HoverFill", InvariantScript = "RGBA(186, 202, 226, 1)" });
+        Rules.Add(new Rule { Property = "Font", InvariantScript = "Font.'Open Sans'" });
+        Rules.Add(new Rule { Property = "FontWeight", InvariantScript = "FontWeight.Normal" });
+        Rules.Add(new Rule { Property = "Align", InvariantScript = "Align.Left" });
+        Rules.Add(new Rule { Property = "X", InvariantScript = "0" });
+        Rules.Add(new Rule { Property = "Y", InvariantScript = "0" });
+        Rules.Add(new Rule { Property = "Width", InvariantScript = "Parent.Width" });
+        Rules.Add(new Rule { Property = "Height", InvariantScript = "40" });
+        Rules.Add(new Rule { Property = "DisplayMode", InvariantScript = "DisplayMode.Edit" });
+        Rules.Add(ZIndex = new Rule { Property = "ZIndex", InvariantScript = "2" });
+        Rules.Add(new Rule { Property = "RadiusTopLeft", InvariantScript = "5" });
+        Rules.Add(new Rule { Property = "RadiusTopRight", InvariantScript = "5" });
+        Rules.Add(new Rule { Property = "RadiusBottomLeft", InvariantScript = "5" });
+        Rules.Add(new Rule { Property = "RadiusBottomRight", InvariantScript = "5" });
+        Rules.Add(new Rule { Property = "BorderThickness", InvariantScript = "2" });
+        Rules.Add(new Rule { Property = "FocusedBorderThickness", InvariantScript = "4" });
+        Rules.Add(new Rule { Property = "Size", InvariantScript = "13" });
+        Rules.Add(new Rule { Property = "Italic", InvariantScript = "false" });
+        Rules.Add(new Rule { Property = "Underline", InvariantScript = "false" });
+        Rules.Add(new Rule { Property = "Strikethrough", InvariantScript = "false" });
+
+        ControlPropertyState = new List<object> { "Default", "Mode", "Format", "VirtualKeyboardMode", "DelayOutput", "BorderColor", "DisabledBorderColor",
+            "PressedBorderColor", "HoverBorderColor", "BorderStyle", "FocusedBorderColor", "Color", "DisabledColor", "PressedColor", "HoverColor",
+            "Fill", "DisabledFill", "PressedFill", "HoverFill", "Font", "FontWeight", "Align", "X", "Y",
+            "Height", "DisplayMode", "ZIndex", "RadiusTopLeft", "RadiusTopRight", "RadiusBottomLeft", "RadiusBottomRight", "BorderThickness", "FocusedBorderThickness",
+            "Size", "Italic", "Underline", "Strikethrough"};
+
+        ControlPropertyState.Add(new ComplexPropertyState()
+        {
+            InvariantPropertyName = "Width",
+            AutoRuleBindingString = "320"
+        });
+    }
+}
