@@ -73,13 +73,16 @@ namespace PowerAppGenerator.AppModel
         [JsonIgnore]
         public Rule Text { get; private set; }
 
+        [JsonIgnore]
+        public Rule Align { get; private set; }
+
         private void AddRulesAndPropState()
         {
             Rules.Add(new Rule { Property = "Live", Category = "Data", InvariantScript = "Live.Off" });
             Rules.Add(Text = new Rule { Property = "Text", Category = "Data", InvariantScript = "" });
             Rules.Add(new Rule { Property = "Role", Category = "Data", InvariantScript = "TextRole.Default" });
             Rules.Add(new Rule { Property = "Overflow", InvariantScript = "Overflow.Hidden" });
-            Rules.Add(new Rule { Property = "Color", InvariantScript = "RGBA(0, 0, 0, 1)" });
+            Rules.Add(Color = new Rule { Property = "Color", InvariantScript = "RGBA(0, 0, 0, 1)" });
             Rules.Add(new Rule { Property = "DisabledColor", InvariantScript = "RGBA(166, 166, 166, 1)" });
             Rules.Add(new Rule { Property = "PressedColor", InvariantScript = "Self.Color" });
             Rules.Add(new Rule { Property = "HoverColor", InvariantScript = "Self.Color" });
@@ -89,13 +92,13 @@ namespace PowerAppGenerator.AppModel
             Rules.Add(new Rule { Property = "HoverBorderColor", InvariantScript = "Self.BorderColor" });
             Rules.Add(new Rule { Property = "BorderStyle", InvariantScript = "BorderStyle.Solid" });
             Rules.Add(new Rule { Property = "FocusedBorderColor", InvariantScript = "Self.BorderColor" });
-            Rules.Add(new Rule { Property = "Fill", InvariantScript = "RGBA(0, 0, 0, 0)" });
+            Rules.Add(Fill = new Rule { Property = "Fill", InvariantScript = "RGBA(0, 0, 0, 0)" });
             Rules.Add(new Rule { Property = "DisabledFill", InvariantScript = "RGBA(0, 0, 0, 0)" });
             Rules.Add(new Rule { Property = "PressedFill", InvariantScript = "Self.Fill" });
             Rules.Add(new Rule { Property = "HoverFill", InvariantScript = "Self.Fill" });
             Rules.Add(new Rule { Property = "Font", InvariantScript = "Font.'Open Sans'" });
             Rules.Add(new Rule { Property = "FontWeight", InvariantScript = "FontWeight.Normal" });
-            Rules.Add(new Rule { Property = "Align", InvariantScript = "Align.Left" });
+            Rules.Add(Align = new Rule { Property = "Align", InvariantScript = "Align.Left" });
             Rules.Add(new Rule { Property = "VerticalAlign", InvariantScript = "VerticalAlign.Middle" });
             Rules.Add(new Rule { Property = "X", InvariantScript = "0" });
             Rules.Add(new Rule { Property = "Y", InvariantScript = "0" });

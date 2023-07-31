@@ -106,6 +106,16 @@ public partial class MainPage : ContentPage
 
             try
             {
+                var titleLabel = new AppModel.Label($"{screen.Name}_TitleLabel1");
+                titleLabel.Parent = container.Name;
+                titleLabel.PublishOrderIndex = idx++;
+                titleLabel.Text!.InvariantScript = $"\"{screen.Title}\"";
+                titleLabel.Align!.InvariantScript = $"Align.Center";
+                titleLabel.Color!.InvariantScript = $"RGBA(255, 255, 255, 1)";
+                titleLabel.Fill!.InvariantScript = $"RGBA(56, 96, 178, 1)";
+                titleLabel.ZIndex!.InvariantScript = $"{titleLabel.PublishOrderIndex}";
+                container.Children.Add(titleLabel);
+
                 var jsonArray = await GetChatCompletionAsJson($"'{screen.Title}' should have following fields in Json array format with Name, Title and Type:");
                 foreach (var item in jsonArray.EnumerateArray())
                 {

@@ -21,6 +21,12 @@ public class ControlInfo
     [JsonIgnore]
     public Rule? ZIndex { get; set; }
 
+    [JsonIgnore]
+    public Rule? Color { get; set; }
+
+    [JsonIgnore]
+    public Rule? Fill { get; set; }
+
     public string Type { get; set; } = "ControlInfo";
     public string Name { get; set; } = "";
     public bool HasDynamicProperties { get; set; } = false;

@@ -81,11 +81,11 @@ public class TextInput : ControlInfo
         Rules.Add(new Rule { Property = "HoverBorderColor", InvariantScript = "RGBA(0, 18, 107, 1)" });
         Rules.Add(new Rule { Property = "BorderStyle", InvariantScript = "BorderStyle.Solid" });
         Rules.Add(new Rule { Property = "FocusedBorderColor", InvariantScript = "Self.BorderColor" });
-        Rules.Add(new Rule { Property = "Color", InvariantScript = "RGBA(0, 0, 0, 1)" });
+        Rules.Add(Color = new Rule { Property = "Color", InvariantScript = "RGBA(0, 0, 0, 1)" });
         Rules.Add(new Rule { Property = "DisabledColor", InvariantScript = "RGBA(166, 166, 166, 1)" });
         Rules.Add(new Rule { Property = "PressedColor", InvariantScript = "Self.Color" });
         Rules.Add(new Rule { Property = "HoverColor", InvariantScript = "RGBA(0, 0, 0, 1)" });
-        Rules.Add(new Rule { Property = "Fill", InvariantScript = "RGBA(255, 255, 255, 1)" });
+        Rules.Add(Fill = new Rule { Property = "Fill", InvariantScript = "RGBA(255, 255, 255, 1)" });
         Rules.Add(new Rule { Property = "DisabledFill", InvariantScript = "RGBA(244, 244, 244, 1)" });
         Rules.Add(new Rule { Property = "PressedFill", InvariantScript = "Self.Fill" });
         Rules.Add(new Rule { Property = "HoverFill", InvariantScript = "RGBA(186, 202, 226, 1)" });
