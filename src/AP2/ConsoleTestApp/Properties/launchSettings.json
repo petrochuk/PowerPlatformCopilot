@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ConsoleTestApp": {
+      "commandName": "Project",
+      "commandLineArgs": "\"which solution I modified last week?\""
+    }
+  }
+}
