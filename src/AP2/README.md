@@ -8,7 +8,7 @@ the [Azure Cognitive Services](https://azure.microsoft.com/en-us/services/cognit
 [Watch Short Demos](docs/Demos.md)
 
 ## Contributing
-This project is welcoming contributions. If you have any questions, feel free to start a [discussion](../../discussions).
+This project is welcoming contributions. If you have any questions, feel free to start a [discussion](https://github.com/petrochuk/DataverseSamples/discussions).
 
 ## Dataverse AI Assistant Skills/Functons
 
