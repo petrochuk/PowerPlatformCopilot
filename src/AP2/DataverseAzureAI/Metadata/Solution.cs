@@ -45,4 +45,7 @@ public class Solution
     public SystemUser ModifiedBy { get; set; }
     [JsonPropertyName("_modifiedby_value")]
     public string ModifiedBySystemUserId { get; set; }
+
+    [JsonIgnore]
+    Dictionary<Guid, SolutionComponent> SolutionComponents { get; set; } = new();
 }
