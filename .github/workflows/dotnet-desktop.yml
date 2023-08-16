@@ -59,9 +59,9 @@ jobs:
       with: 
         name: ConsoleTestApp
         
-    - run: |
+    - name: Creates a release and uploads attachments
+      run: |
           gh release create v1.2.3 release.tar.xz
       env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
-      name: Creates a release in GitHub and uploads attachments
-      
+     
