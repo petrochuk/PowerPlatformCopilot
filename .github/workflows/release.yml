@@ -1,0 +1,68 @@
+# For more information on GitHub Actions, refer to https://github.com/features/actions
+# For a complete CI/CD sample to get started with GitHub Action workflows for Desktop Applications,
+# refer to https://github.com/microsoft/github-actions-for-desktop-apps
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'version'
+        required: true
+
+permissions:
+  contents: write
+  
+jobs:
+  build:
+
+    runs-on: windows-latest  # For a list of available runner types, refer to
+                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
+
+    env:
+      Solution_Name: src/AP2/AP2.sln
+      GITHUB_TOKEN: ${{ github.TOKEN }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    # Install the .NET Core workload
+    - name: Install .NET 8
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore $env:Solution_Name
+
+    - name: Build
+      run: dotnet build --no-restore $env:Solution_Name -c Release
+
+    - name: Publish
+      run: dotnet publish $env:Solution_Name -c Release
+
+    - name: Upload DataverseAzureAI Artifacts
+      uses: actions/upload-artifact@v3
+      with: 
+        name: DataverseAzureAI
+        path: src/AP2/DataverseAzureAI/bin/Release/net8.0/publish
+        if-no-files-found: error
+
+    - name: Upload ConsoleTestApp Artifacts
+      uses: actions/upload-artifact@v3
+      with: 
+        name: ConsoleTestApp
+        path: src/AP2/ConsoleTestApp/bin/Release/net8.0/publish
+        if-no-files-found: error
+        
+    - name: Creates a release and uploads attachments
+      run: | 
+        $pwd
+        mkdir drop
+        Compress-Archive -Path src\AP2\DataverseAzureAI\bin\Release\net8.0\publish -DestinationPath drop\DataverseAzureAI.zip
+        Compress-Archive -Path src\AP2\ConsoleTestApp\bin\Release\net8.0\publish -DestinationPath drop\ConsoleTestApp.zip
+        gh release create ${{ github.event.inputs.version }} -t ${{ github.event.inputs.version }} (dir drop\*.zip)
