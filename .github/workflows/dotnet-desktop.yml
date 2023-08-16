@@ -63,7 +63,7 @@ jobs:
         
     - name: Creates a release and uploads attachments
       run: |
-          gh release create v1.2.3 'src/AP2/ConsoleTestApp/bin/${{ matrix.configuration }}/net8.0/publish/*.*'
+          gh release create v0.1.2.3
       env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
      
