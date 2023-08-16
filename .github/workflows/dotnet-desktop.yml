@@ -25,6 +25,7 @@ jobs:
 
     env:
       Solution_Name: src/AP2/AP2.sln
+      GITHUB_TOKEN: ${{ github.TOKEN }}
 
     steps:
     - name: Checkout
@@ -62,8 +63,4 @@ jobs:
         if-no-files-found: error
         
     - name: Creates a release and uploads attachments
-      run: |
-          gh release create v0.1.2.4 src/AP2/ConsoleTestApp/bin/${{ matrix.configuration }}/net8.0/publish
-      env:
-          GITHUB_TOKEN: ${{ github.TOKEN }}
-     
+      run: gh release create v0.1.2.4 src\AP2\DataverseAzureAI\bin\${{ matrix.configuration }}\net8.0\publish\
