@@ -58,6 +58,8 @@ jobs:
       uses: actions/upload-artifact@v3
       with: 
         name: ConsoleTestApp
+        path: src/AP2/ConsoleTestApp/bin/${{ matrix.configuration }}/net8.0/publish
+        if-no-files-found: error
         
     - name: Creates a release and uploads attachments
       run: |
