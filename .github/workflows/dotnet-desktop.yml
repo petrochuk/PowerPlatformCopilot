@@ -63,7 +63,7 @@ jobs:
         
     - name: Creates a release and uploads attachments
       run: |
-          gh release create v1.2.3 release.tar.xz
+          gh release create v1.2.3 DataverseAzureAI.zip
       env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
      
