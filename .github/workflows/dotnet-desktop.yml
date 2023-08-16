@@ -40,7 +40,7 @@ jobs:
       run: dotnet restore $env:Solution_Name
 
     - name: Build
-      run: dotnet build --no-restore $env:Solution_Name -c $env:Configuration
+      run: dotnet build --no-restore $env:Solution_Name -c ${{ matrix.configuration }}
 
     - name: Publish
-      run: dotnet publish $env:Solution_Name -c $env:Configuration
+      run: dotnet publish $env:Solution_Name -c ${{ matrix.configuration }}
