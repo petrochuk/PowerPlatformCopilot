@@ -68,4 +68,4 @@ jobs:
         mkdir drop\${{ matrix.configuration }}
         Compress-Archive -Path src\AP2\DataverseAzureAI\bin\${{ matrix.configuration }}\net8.0\publish -DestinationPath drop\${{ matrix.configuration }}\DataverseAzureAI.zip
         Compress-Archive -Path src\AP2\ConsoleTestApp\bin\${{ matrix.configuration }}\net8.0\publish -DestinationPath drop\${{ matrix.configuration }}\ConsoleTestApp.zip
-        gh release create ${GITHUB_REF#refs/*/}-${{ matrix.configuration }} -t ${GITHUB_REF#refs/*/}-${{ matrix.configuration }} (dir drop\${{ matrix.configuration }}\*.zip)
+        gh release create ${GITHUB_REF#refs/*/} -t ${GITHUB_REF#refs/*/}-${{ matrix.configuration }} (dir drop\${{ matrix.configuration }}\*.zip)
