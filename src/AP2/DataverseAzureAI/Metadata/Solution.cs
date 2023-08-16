@@ -1,4 +1,7 @@
+using AP2.DataverseAzureAI.OData;
+using System.Net.Http;
 using System.Reflection;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace AP2.DataverseAzureAI.Metadata;
@@ -16,7 +19,7 @@ public class Solution
     public bool IsApiManaged { get; set; }
     public string _publisherid_value { get; set; }
     public bool IsManaged { get; set; }
-    public bool isvisible { get; set; }
+    public bool IsVisible { get; set; }
     public object thumbprint { get; set; }
     public object pinpointpublisherid { get; set; }
     public string Version { get; set; }
@@ -47,5 +50,34 @@ public class Solution
     public string ModifiedBySystemUserId { get; set; }
 
     [JsonIgnore]
-    Dictionary<Guid, SolutionComponent> SolutionComponents { get; set; } = new();
+    public Dictionary<Guid, SolutionComponent>? Components { get; set; }
+
+    public void LoadComponents()
+    {
+        if (Components != null)
+            return;
+
+        /*
+        _canvasApps = new Lazy<Task<IList<CanvasApp>>>(async () =>
+        {
+            if (EnvironmentId == Guid.Empty)
+                throw new InvalidOperationException($"{nameof(EnvironmentId)} is not set.");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildApiQueryUri($"powerapps/apps?%24expand=permissions%28%24filter%3DmaxAssignedTo%28%27{UserObjectId}%27%29%29&%24filter=classification+eq+%27SharedWithMeApps%27+and+environment+eq+%27{EnvironmentId}%27&api-version=1"));
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+
+            var appModules = JsonSerializer.Deserialize<ODataContext<CanvasApp>>(contentStream, _jsonSerializerOptions);
+            if (appModules == null)
+                throw new InvalidOperationException("Failed to get list of PowerApps.");
+            return appModules.Values;
+        });
+        */
+    }
+
+    public override string ToString()
+    {
+        return FriendlyName;
+    }
 }

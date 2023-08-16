@@ -45,4 +45,28 @@ public static class PropertyInfoExtensions
 
         return $"{propertyInfo.Name}: {propertyValue}";
     }
+
+    public static int CompareTo(this PropertyInfo propertyInfo, object left, object right)
+    {
+        _ = propertyInfo ?? throw new ArgumentNullException(nameof(propertyInfo));
+        _ = left ?? throw new ArgumentNullException(nameof(left));
+        _ = right ?? throw new ArgumentNullException(nameof(right));
+
+        var leftValue = propertyInfo.GetValue(left);
+        var rightValue = propertyInfo.GetValue(right);
+        if (leftValue == null && rightValue == null)
+            return 0;
+        if (leftValue == null)
+            return -1;
+        if (rightValue == null)
+            return -1;
+        if (propertyInfo.PropertyType == typeof(DateTime))
+            return ((DateTime)leftValue).CompareTo((DateTime)rightValue);
+        else if (propertyInfo.PropertyType == typeof(string))
+            return string.Compare((string)leftValue, (string)rightValue, StringComparison.OrdinalIgnoreCase);
+        else if (propertyInfo.PropertyType == typeof(int))
+            return ((int)leftValue).CompareTo((int)rightValue);
+
+        return string.Compare(leftValue.ToString(), rightValue.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
 }

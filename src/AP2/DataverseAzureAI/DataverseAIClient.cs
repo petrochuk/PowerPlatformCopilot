@@ -22,6 +22,8 @@ public partial class DataverseAIClient
     const string TableNotFound = "Table not found";
     const string PropertyNotFound = "Property not found";
     const string AttributeNotFound = "Attribute not found";
+    const string First = "First";
+    const string Last = "Last";
 
     #endregion
 

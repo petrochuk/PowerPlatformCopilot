@@ -60,8 +60,10 @@ public class CanvasAppProperties
     public string CommitMessage { get; set; }
     public string Publisher { get; set; }
     public Appuris AppUris { get; set; }
+
     [JsonPropertyName("CreatedTime")]
     public DateTime CreatedOn { get; set; }
+
     [JsonPropertyName("LastModifiedTime")]
     public DateTime ModifiedOn { get; set; }
     public DateTime LastPublishTime { get; set; }
@@ -256,21 +258,13 @@ public class Violation
 public class Violationsbypolicy
 {
     public Policyref policyRef { get; set; }
-    public Violation1[] violations { get; set; }
+    public Violation[] violations { get; set; }
 }
 
 public class Policyref
 {
     public string policyId { get; set; }
     public string policyDisplayName { get; set; }
-}
-
-public class Violation1
-{
-    public string policyId { get; set; }
-    public string policyDisplayName { get; set; }
-    public string type { get; set; }
-    public string[] parameters { get; set; }
 }
 
 public class Appdocumentcomplexity

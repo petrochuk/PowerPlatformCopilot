@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Reflection;
 using AP2.DataverseAzureAI.Extensions;
+using AP2.DataverseAzureAI.Globalization;
 using AP2.DataverseAzureAI.Metadata;
 
 namespace AP2.DataverseAzureAI;
@@ -123,18 +124,38 @@ public partial class DataverseAIClient
         {
             return PropertyNotFound;
         }
-
-        var result = new List<string>();
-        foreach (var canvasApp in canvasApps)
+        
+        if (Strings.Last.ContainsKey(propertyValueFilter))
         {
-            if (propertyInfo.Equals(canvasApp, propertyValueFilter))
-                result.Add(canvasApp.Properties.DisplayName);
+            CanvasApp? singleResult = null;
+            foreach (var canvasApp in canvasApps)
+            {
+                if (singleResult == null)
+                {
+                    singleResult = canvasApp;
+                    continue;
+                }
+
+                if (0 < propertyInfo.CompareTo(canvasApp.Properties, singleResult.Properties))
+                    singleResult = canvasApp;
+            }
+
+            return singleResult == null ? PowerAppsNotFound : $"Found: {singleResult.Properties.DisplayName}";
         }
+        else
+        {
+            var result = new List<string>();
+            foreach (var canvasApp in canvasApps)
+            {
+                if (propertyInfo.Equals(canvasApp.Properties, propertyValueFilter))
+                    result.Add(canvasApp.Properties.DisplayName);
+            }
 
-        if (result.Count == 0)
-            return PowerAppsNotFound;
+            if (result.Count == 0)
+                return PowerAppsNotFound;
 
-        return string.Join(", ", result);
+            return string.Join(", ", result);
+        }
     }
 
     [Description($"Returns property value for a canvas app")]
@@ -154,7 +175,7 @@ public partial class DataverseAIClient
         foreach (var canvasApp in canvasApps)
         {
             if (string.Equals(canvasAppName, canvasApp.Properties.DisplayName, StringComparison.OrdinalIgnoreCase))
-                return propertyInfo.GetValue(canvasApp, FullName);
+                return propertyInfo.GetValue(canvasApp.Properties, FullName);
         }
 
         return $"Canvas app '{canvasAppName}' was not found";
@@ -211,6 +232,35 @@ public partial class DataverseAIClient
         return $"Solution(s) matching: {string.Join(", ", result)}";
     }
 
+    [Description("Returns list of components inside Dataverse solutions. It can filter on component type, name or other properties")]
+    public async Task<string> ListOSolutionComponents(
+    [Description("Dataverse solution friendly, or unique name, or solution id")]
+        string solutionName,
+    [Description("Property name or empty to return all Dataverse solutions")]
+        string propertyName,
+    [Description("Filter by property value")]
+        string propertyValueFilter,
+    [Description("Optional personal pronoun such as 'I', 'me', co-worker's first, last name, or full name for filters in addition to CreatedOn, ModifiedOn")]
+        string userFirstLastOrPronoun)
+    {
+        var solutions = await _solutions.Value.ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(solutionName))
+            return "Solution name is required";
+
+        foreach (var solution in solutions)
+        {
+            if (string.Compare(solution.FriendlyName, solutionName, StringComparison.OrdinalIgnoreCase) != 0)
+                continue;
+
+            if (solution.Components == null)
+            {
+
+            }
+        }
+
+        return "Not implemented yet";
+    }
+
     [Description("Returns property value for specified Dataverse solution")]
     public async Task<string> GetSolutionPropertyValue(
         [Description("Dataverse solution friendly, unique name or id")]
@@ -220,7 +270,7 @@ public partial class DataverseAIClient
     {
         if (string.IsNullOrWhiteSpace(solutionName))
             return "Solution name is required";
-        if (!Solution.Properties.TryGetValue(propertyName, out var propertyInfo))
+        if (string.IsNullOrWhiteSpace(propertyName) || !Solution.Properties.TryGetValue(propertyName, out var propertyInfo))
             return PropertyNotFound;
         solutionName = solutionName.Trim();
 
@@ -236,6 +286,20 @@ public partial class DataverseAIClient
         }
 
         return $"Not found any solutions matching '{solutionName}' filter";
+    }
+
+    #endregion
+
+    #region Create
+
+    [Description("Creates new items, records or anything else inside PowerPlatform including but not limited to apps, solutions, tables, users, components")]
+    public Task<string> CreateItemInsidePowerPlatorm(
+    [Description("Type of an item to create")]
+        string itemType,
+    [Description("Name for an item")]
+        string itemName)
+    {
+        return Task.FromResult("Not implemented yet");
     }
 
     #endregion
