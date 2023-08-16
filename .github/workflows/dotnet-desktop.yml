@@ -10,8 +10,10 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: write
+  
 jobs:
-
   build:
 
     strategy:
@@ -56,5 +58,10 @@ jobs:
       uses: actions/upload-artifact@v3
       with: 
         name: ConsoleTestApp
-        path: src/AP2/ConsoleTestApp/bin/${{ matrix.configuration }}/net8.0/publish
-        if-no-files-found: error
+        
+    - run: |
+          gh release create v1.2.3 release.tar.xz
+      env:
+          GITHUB_TOKEN: ${{ github.TOKEN }}
+      name: Creates a release in GitHub and uploads attachments
+      
