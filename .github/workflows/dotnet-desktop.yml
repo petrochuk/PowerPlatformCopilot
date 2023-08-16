@@ -65,4 +65,6 @@ jobs:
     - name: Creates a release and uploads attachments
       run: | 
         $pwd
-        gh release create v0.1.2.4 (dir src\AP2\DataverseAzureAI\bin\${{ matrix.configuration }}\net8.0\publish\*.*)
+        Compress-Archive -Path src\AP2\DataverseAzureAI\bin\${{ matrix.configuration }}\net8.0\publish -DestinationPath drop\${{ matrix.configuration }}\DataverseAzureAI.zip
+        Compress-Archive -Path src\AP2\ConsoleTestApp\bin\${{ matrix.configuration }}\net8.0\publish -DestinationPath drop\${{ matrix.configuration }}\ConsoleTestApp.zip
+        gh release create ${GITHUB_REF#refs/*/} -t ${GITHUB_REF#refs/*/} (dir drop\${{ matrix.configuration }}\*.zip)
