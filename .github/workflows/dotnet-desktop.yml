@@ -63,4 +63,6 @@ jobs:
         if-no-files-found: error
         
     - name: Creates a release and uploads attachments
-      run: gh release create v0.1.2.4 .\src\AP2\DataverseAzureAI\bin\${{ matrix.configuration }}\net8.0\publish\
+      run: | 
+        $pwd
+        gh release create v0.1.2.4 .\src\AP2\DataverseAzureAI\bin\${{ matrix.configuration }}\net8.0\publish\
