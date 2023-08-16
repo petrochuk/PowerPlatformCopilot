@@ -45,9 +45,16 @@ jobs:
     - name: Publish
       run: dotnet publish $env:Solution_Name -c ${{ matrix.configuration }}
 
-    - name: Upload Artifacts
+    - name: Upload DataverseAzureAI Artifacts
       uses: actions/upload-artifact@v3
       with: 
-        name: assets-for-download
+        name: DataverseAzureAI
         path: src/AP2/DataverseAzureAI/bin/${{ matrix.configuration }}/net8.0/publish
+        if-no-files-found: error
+
+    - name: Upload ConsoleTestApp Artifacts
+      uses: actions/upload-artifact@v3
+      with: 
+        name: ConsoleTestApp
+        path: src/AP2/ConsoleTestApp/bin/${{ matrix.configuration }}/net8.0/publish
         if-no-files-found: error
