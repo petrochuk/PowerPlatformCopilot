@@ -5,6 +5,8 @@ using AP2.DataverseAzureAI.Settings;
 using Azure;
 using Azure.AI.OpenAI;
 using Microsoft.Extensions.Options;
+using Microsoft.Graph;
+using Microsoft.Kiota.Abstractions.Authentication;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
@@ -34,6 +36,8 @@ public partial class DataverseAIClient
         PropertyNameCaseInsensitive = true
     };
     private Lazy<OpenAIClient> _openAIClient;
+    private Lazy<GraphServiceClient> _graphClient;
+
     private readonly HttpClient _httpClient;
     private IList<EntityMetadataModel>? _entityMetadataModels;
     private readonly Lazy<Task<IList<AppModule>>> _appModules;
@@ -56,7 +60,8 @@ public partial class DataverseAIClient
 
     #region Constructors & Initialization
 
-    public DataverseAIClient(HttpClient httpClient, IOptions<AzureAISettings> azureAISettings)
+    public DataverseAIClient(HttpClient httpClient, IOptions<AzureAISettings> azureAISettings, 
+        IAuthenticationProvider authenticationProvider)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _azureAISettings = azureAISettings;
@@ -75,6 +80,12 @@ public partial class DataverseAIClient
                 OpenApiEndPoint == null ? azureAISettings.Value.OpenApiEndPoint : OpenApiEndPoint,
                 azureKeyCredential
             );
+        });
+
+        _graphClient = new Lazy<GraphServiceClient>(() =>
+        {
+            var graphClient = new GraphServiceClient(authenticationProvider);
+            return graphClient;
         });
 
         foreach (var functionDefinition in _aIFunctionsCollection.Definitions)

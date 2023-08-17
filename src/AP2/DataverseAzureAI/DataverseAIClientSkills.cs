@@ -294,18 +294,31 @@ public partial class DataverseAIClient
     #region Send email
 
     [Description("Sends an email or shares a link to an item, record or anything else inside PowerPlatform including but not limited to app, solution, table, component")]
-    public Task<string> SendEmailOrShareLinkWithSomeone(
+    public async Task<string> SendEmailOrShareLinkWithSomeone(
         [Required, Description("Type of an item to send")]
         string itemType,
         [Required, Description("Name for an item")]
         string itemName,
-        [Required, Description("Person first name, last name or a email to send email to or share link with")]
-        string persionName)
+        [Required, Description("Person's first name, last name or a email to send email to or share link with")]
+        string personName)
     {
-        if (string.IsNullOrWhiteSpace(persionName))
-            return Task.FromResult("Person name is required");
+        if (string.IsNullOrWhiteSpace(personName))
+            return "Person name is required";
 
-        return Task.FromResult("Not implemented yet");
+        personName = personName.Trim();
+
+        var people = await _graphClient.Value.Me.People.GetAsync().ConfigureAwait(false);
+        foreach (var person in people.Value)
+        {
+            if (string.Compare(person.DisplayName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
+                string.Compare(person.GivenName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
+                string.Compare(person.Surname, personName, StringComparison.OrdinalIgnoreCase) == 0)
+            {
+                return $"Sent message to {person.DisplayName} ({person.UserPrincipalName})";
+            }
+        }
+
+        return "Not implemented yet";
     }
 
     #endregion
@@ -314,9 +327,9 @@ public partial class DataverseAIClient
 
     [Description("Creates new items, records or anything else inside PowerPlatform including but not limited to apps, solutions, tables, users, components")]
     public Task<string> CreateItemInsidePowerPlatorm(
-    [Description("Type of an item to create")]
+        [Description("Type of an item to create")]
         string itemType,
-    [Description("Name for an item")]
+        [Description("Name for an item")]
         string itemName)
     {
         return Task.FromResult("Not implemented yet");

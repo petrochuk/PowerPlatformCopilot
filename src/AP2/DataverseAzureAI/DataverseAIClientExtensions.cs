@@ -2,6 +2,8 @@ using System.Net;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using AP2.DataverseAzureAI.Settings;
+using Microsoft.Graph;
+using Microsoft.Kiota.Abstractions.Authentication;
 
 namespace AP2.DataverseAzureAI;
 
@@ -21,6 +23,8 @@ public static class DataverseAIClientExtensions
 
         services.AddOptions<AzureAISettings>().Bind(configuration.GetSection("AzureAI"));
         services.AddOptions<PowerPlatformSettings>().Bind(configuration.GetSection("PowerPlatform"));
+        services.AddSingleton<IAuthenticationProvider, GraphAuthenticationProvider>();
+        services.AddSingleton<GraphServiceClient>();
 
         return services;
     }
