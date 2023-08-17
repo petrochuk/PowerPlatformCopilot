@@ -1,5 +1,6 @@
 using Azure.AI.OpenAI;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text;
 
@@ -28,12 +29,24 @@ internal class AIFunctionCollection
             };
 
             var parameters = new StringBuilder("{ \"type\": \"object\", \"properties\": {");
+            var requiredParameters = new StringBuilder();
             var firstParameter = true;
             foreach (var parameter in method.GetParameters())
             {
                 var parameterDescriptionAttribute = parameter.GetCustomAttribute<DescriptionAttribute>();
                 if (parameterDescriptionAttribute == null)
                     continue;
+
+                var parameterRequiredAttribute = parameter.GetCustomAttribute<RequiredAttribute>();
+                if (parameterRequiredAttribute != null)
+                {
+                    if (requiredParameters.Length <= 0)
+                        requiredParameters.Append("\"required\": [");
+                    else
+                        requiredParameters.Append(", ");
+
+                    requiredParameters.Append($"\"{parameter.Name}\"");
+                }
 
                 if (!firstParameter)
                     parameters.Append(", ");
@@ -42,7 +55,13 @@ internal class AIFunctionCollection
 
                 parameters.Append($"\"{parameter.Name}\": {{ \"type\": \"{parameter.ParameterType.ToJsonType()}\",\"description\":\"{parameterDescriptionAttribute.Description}\"}}");
             }
-            parameters.Append($"}} }}");
+            parameters.Append($"}}");
+            if (0 < requiredParameters.Length)
+            {
+                requiredParameters.Append("]");
+                parameters.Append($", {requiredParameters}");
+            }
+            parameters.Append($" }}");
 
             functionDefinition.Parameters = BinaryData.FromString(parameters.ToString());
 

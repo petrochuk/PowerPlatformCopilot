@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using AP2.DataverseAzureAI.Extensions;
 using AP2.DataverseAzureAI.Globalization;
@@ -286,6 +287,25 @@ public partial class DataverseAIClient
         }
 
         return $"Not found any solutions matching '{solutionName}' filter";
+    }
+
+    #endregion
+
+    #region Send email
+
+    [Description("Sends an email or shares a link to an item, record or anything else inside PowerPlatform including but not limited to app, solution, table, component")]
+    public Task<string> SendEmailOrShareLinkWithSomeone(
+        [Required, Description("Type of an item to send")]
+        string itemType,
+        [Required, Description("Name for an item")]
+        string itemName,
+        [Required, Description("Person first name, last name or a email to send email to or share link with")]
+        string persionName)
+    {
+        if (string.IsNullOrWhiteSpace(persionName))
+            return Task.FromResult("Person name is required");
+
+        return Task.FromResult("Not implemented yet");
     }
 
     #endregion
