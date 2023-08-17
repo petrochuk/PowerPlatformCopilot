@@ -6,6 +6,8 @@ public static class NumberExtensions
 
     static NumberExtensions()
     {
+        NumberTable.Add("few", 3);
+
         NumberTable.Add("zero", 0);
         NumberTable.Add("one", 1);
         NumberTable.Add("two", 2);
@@ -43,35 +45,35 @@ public static class NumberExtensions
         NumberTable.Add("quintillion", 1000000000000000000);
     }
 
-    public static bool TryParseToLong(this string numberString, out long total)
+    public static bool TryParseToLong(this string[] parts, int startIndex, int endIndex, out long total)
     {
-        if (string.IsNullOrWhiteSpace(numberString))
+        if (parts == null || parts.Length <= 0 || startIndex < 0 || endIndex < startIndex)
         {
             total = 0L;
             return false;
         }
 
-        if (long.TryParse(numberString, out total))
-            return true;
-
-        var parts = numberString.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
         total = 0L;
         long acc = 0L;
-        foreach (var part in parts)
+        long partNumber;
+        for (int i=startIndex; i<endIndex; i++)
         {
-            if (!NumberTable.TryGetValue(part, out var n))
-                return false;
-            if (n >= 1000)
+            if (!long.TryParse(parts[i], out partNumber))
             {
-                total += (acc * n);
+                if (!NumberTable.TryGetValue(parts[i], out partNumber))
+                    return false;
+            }
+
+            if (partNumber >= 1000)
+            {
+                total += (acc * partNumber);
                 acc = 0;
             }
-            else if (n >= 100)
+            else if (partNumber >= 100)
             {
-                acc *= n;
+                acc *= partNumber;
             }
-            else acc += n;
+            else acc += partNumber;
         }
 
         total += acc;

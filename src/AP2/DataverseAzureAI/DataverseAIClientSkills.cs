@@ -4,6 +4,7 @@ using System.Reflection;
 using AP2.DataverseAzureAI.Extensions;
 using AP2.DataverseAzureAI.Globalization;
 using AP2.DataverseAzureAI.Metadata;
+using Microsoft.Graph.Models;
 
 namespace AP2.DataverseAzureAI;
 
@@ -39,7 +40,7 @@ public partial class DataverseAIClient
         var result = new List<string>();
         foreach (var entityMetadataModel in _entityMetadataModels)
         {
-            if (propertyInfo.Equals(entityMetadataModel, propertyValueFilter))
+            if (propertyInfo.Equals(entityMetadataModel, propertyValueFilter, _timeProvider))
                 result.Add(entityMetadataModel.DisplayOrLogicalName);
         }
 
@@ -65,7 +66,7 @@ public partial class DataverseAIClient
 
         if (EntityMetadataModel.Properties.TryGetValue(propertyName, out var property))
         {
-            return Task.FromResult(property.GetValue(entityMetadataModel, FullName));
+            return Task.FromResult(property.GetValue(entityMetadataModel, FullName, _timeProvider));
         }
 
         return Task.FromResult(PropertyNotFound);
@@ -98,7 +99,7 @@ public partial class DataverseAIClient
         var result = new List<string>();
         foreach (var appModule in appModules)
         {
-            if (propertyInfo.Equals(appModule, propertyValueFilter))
+            if (propertyInfo.Equals(appModule, propertyValueFilter, _timeProvider))
                 result.Add(appModule.Name);
         }
 
@@ -108,12 +109,65 @@ public partial class DataverseAIClient
         return string.Join(", ", result);
     }
 
-    [Description("Returns filtered list of canvas PowerApps based on specified property value")]
+    [Description("Finds a canvas app based on specified property value")]
+    public async Task<string> FindCanvasApp(
+        [Required, Description("Property name")]
+        string propertyName,
+        [Required, Description("Property value")]
+        string propertyValue)
+    {
+        var canvasApps = await _canvasApps.Value.ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(propertyName))
+        {
+            return "List of canvas apps: " + string.Join(", ", canvasApps.Select(x => x.Properties.DisplayName));
+        }
+
+        if (!CanvasAppProperties.Properties.TryGetValue(propertyName, out var propertyInfo))
+        {
+            return PropertyNotFound;
+        }
+
+        if (Strings.Last.ContainsKey(propertyValue))
+        {
+            CanvasApp? singleResult = null;
+            foreach (var canvasApp in canvasApps)
+            {
+                if (singleResult == null)
+                {
+                    singleResult = canvasApp;
+                    continue;
+                }
+
+                if (0 < propertyInfo.CompareTo(canvasApp.Properties, singleResult.Properties))
+                    singleResult = canvasApp;
+            }
+
+            return singleResult == null ? PowerAppsNotFound : $"Found: {singleResult.Properties.DisplayName}";
+        }
+        else
+        {
+            var result = new List<string>();
+            foreach (var canvasApp in canvasApps)
+            {
+                if (propertyInfo.Equals(canvasApp.Properties, propertyValue, _timeProvider))
+                    result.Add(canvasApp.Properties.DisplayName);
+            }
+
+            if (result.Count == 0)
+                return PowerAppsNotFound;
+
+            return "List of canvas apps: " + string.Join(", ", result);
+        }
+    }
+
+    [Description("Returns filtered list of canvas apps based on specified property value")]
     public async Task<string> ListOfCanvasAppsByPropertyValue(
         [Description("Property name or empty to return all canvas PowerApps")]
         string propertyName,
-        [Description("Filter by property value")]
-        string propertyValueFilter)
+        [Description("Property value")]
+        string propertyValueFilter,
+        [Description("Optional limit like last, first, top 10, bottom 3")]
+        string sortOrder)
     {
         var canvasApps = await _canvasApps.Value.ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(propertyName))
@@ -148,14 +202,14 @@ public partial class DataverseAIClient
             var result = new List<string>();
             foreach (var canvasApp in canvasApps)
             {
-                if (propertyInfo.Equals(canvasApp.Properties, propertyValueFilter))
+                if (propertyInfo.Equals(canvasApp.Properties, propertyValueFilter, _timeProvider))
                     result.Add(canvasApp.Properties.DisplayName);
             }
 
             if (result.Count == 0)
                 return PowerAppsNotFound;
 
-            return string.Join(", ", result);
+            return "List of canvas apps: " + string.Join(", ", result);
         }
     }
 
@@ -176,7 +230,7 @@ public partial class DataverseAIClient
         foreach (var canvasApp in canvasApps)
         {
             if (string.Equals(canvasAppName, canvasApp.Properties.DisplayName, StringComparison.OrdinalIgnoreCase))
-                return propertyInfo.GetValue(canvasApp.Properties, FullName);
+                return propertyInfo.GetValue(canvasApp.Properties, FullName, _timeProvider);
         }
 
         return $"Canvas app '{canvasAppName}' was not found";
@@ -205,7 +259,7 @@ public partial class DataverseAIClient
         var result = new List<string>();
         foreach (var solution in solutions)
         {
-            if (propertyInfo.Equals(solution, propertyValueFilter))
+            if (propertyInfo.Equals(solution, propertyValueFilter, _timeProvider))
             {
                 if (!string.IsNullOrWhiteSpace(userFirstLastOrPronoun))
                 {
@@ -218,7 +272,7 @@ public partial class DataverseAIClient
                     if (string.Compare(userFirstLastOrPronoun, "I", StringComparison.OrdinalIgnoreCase) == 0 ||
                         string.Compare(userFirstLastOrPronoun, "me", StringComparison.OrdinalIgnoreCase) == 0)
                     {
-                        if (userPropertyInfo == null || !userPropertyInfo.Equals(solution, FullName))
+                        if (userPropertyInfo == null || !userPropertyInfo.Equals(solution, FullName, _timeProvider))
                             continue;
                     }
                 }
@@ -282,7 +336,7 @@ public partial class DataverseAIClient
                 string.Compare(solution.UniqueName, solutionName, StringComparison.OrdinalIgnoreCase) == 0 ||
                 string.Compare(solution.SolutionId.ToString(), solutionName, StringComparison.OrdinalIgnoreCase) == 0)
             {
-                return propertyInfo.GetValue(solution, FullName);
+                return propertyInfo.GetValue(solution, FullName, _timeProvider);
             }
         }
 
@@ -300,7 +354,11 @@ public partial class DataverseAIClient
         [Required, Description("Name for an item")]
         string itemName,
         [Required, Description("Person's first name, last name or a email to send email to or share link with")]
-        string personName)
+        string personName,
+        [Required, Description("Suggested email or message subject/title")]
+        string emailTitle,
+        [Required, Description("Suggested email or message body text")]
+        string emailBody)
     {
         if (string.IsNullOrWhiteSpace(personName))
             return "Person name is required";
@@ -308,12 +366,35 @@ public partial class DataverseAIClient
         personName = personName.Trim();
 
         var people = await _graphClient.Value.Me.People.GetAsync().ConfigureAwait(false);
+        if (people == null || people.Value == null || people.Value.Count <= 0) 
+            return "Unable to find list of people";
+
         foreach (var person in people.Value)
         {
             if (string.Compare(person.DisplayName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
                 string.Compare(person.GivenName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
                 string.Compare(person.Surname, personName, StringComparison.OrdinalIgnoreCase) == 0)
             {
+                var mesg = new Message
+                {
+                    Subject = emailTitle,
+                    Body = new ItemBody
+                    {
+                        ContentType = BodyType.Html,
+                        Content = emailBody
+                    },
+                    ToRecipients = new List<Recipient>
+                    {
+                        new Recipient { EmailAddress = new EmailAddress { Address = person.UserPrincipalName } },
+                    }
+                };
+
+                Microsoft.Graph.Me.SendMail.SendMailPostRequestBody body = new()
+                {
+                    Message = mesg,
+                    SaveToSentItems = false
+                };
+                await _graphClient.Value.Me.SendMail.PostAsync(body);
                 return $"Sent message to {person.DisplayName} ({person.UserPrincipalName})";
             }
         }

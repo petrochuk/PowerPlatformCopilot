@@ -5,7 +5,7 @@ namespace AP2.DataverseAzureAI.Extensions;
 
 public static class PropertyInfoExtensions
 {
-    public static bool Equals(this PropertyInfo propertyInfo, object instance, string? value)
+    public static bool Equals(this PropertyInfo propertyInfo, object instance, string? value, TimeProvider timeProvider)
     {
         _ = propertyInfo ?? throw new ArgumentNullException(nameof(propertyInfo));
         _ = instance ?? throw new ArgumentNullException(nameof(instance));
@@ -20,15 +20,15 @@ public static class PropertyInfoExtensions
             return string.Equals((string)propertyValue, value.Trim(), StringComparison.OrdinalIgnoreCase);
 
         if (propertyInfo.PropertyType == typeof(DateTime))
-        {
-            return ((DateTime)propertyValue).RelativeEquals(value);
-        }
+            return new DateTimeOffset(((DateTime)propertyValue)).RelativeEquals(value, timeProvider);
+        else if (propertyInfo.PropertyType == typeof(DateTimeOffset))
+            return ((DateTimeOffset)propertyValue).RelativeEquals(value, timeProvider);
 
         // Fall back to ToString() for any other types
         return string.Equals(propertyValue.ToString(), value.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
-    public static string GetValue(this PropertyInfo propertyInfo, object instance, string? customerFullName)
+    public static string GetValue(this PropertyInfo propertyInfo, object instance, string? customerFullName, TimeProvider timeProvider)
     {
         _ = propertyInfo ?? throw new ArgumentNullException(nameof(propertyInfo));
         _ = instance ?? throw new ArgumentNullException(nameof(instance));
@@ -38,7 +38,9 @@ public static class PropertyInfoExtensions
             return $"{propertyInfo.Name}: null";
 
         if (propertyInfo.PropertyType == typeof(DateTime))
-            return $"{propertyInfo.Name}: {((DateTime)propertyValue).ToRelativeSentence()}";
+            return $"{propertyInfo.Name}: {(new DateTimeOffset((DateTime)propertyValue)).ToRelativeSentence(timeProvider)}";
+        else if (propertyInfo.PropertyType == typeof(DateTimeOffset))
+            return $"{propertyInfo.Name}: {((DateTimeOffset)propertyValue).ToRelativeSentence(timeProvider)}";
 
         if (string.Compare(propertyValue.ToString(), customerFullName, StringComparison.OrdinalIgnoreCase) == 0)
             return $"{propertyInfo.Name}: me";

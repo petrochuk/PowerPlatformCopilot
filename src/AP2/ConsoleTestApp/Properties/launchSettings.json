@@ -2,7 +2,7 @@
   "profiles": {
     "ConsoleTestApp": {
       "commandName": "Project",
-      "commandLineArgs": "\"which canvas app was modified recently?\""
+      "commandLineArgs": "\"which canvas app was published recently?\""
     }
   }
 }

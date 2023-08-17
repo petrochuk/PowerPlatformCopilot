@@ -37,6 +37,7 @@ public partial class DataverseAIClient
     };
     private Lazy<OpenAIClient> _openAIClient;
     private Lazy<GraphServiceClient> _graphClient;
+    TimeProvider _timeProvider;
 
     private readonly HttpClient _httpClient;
     private IList<EntityMetadataModel>? _entityMetadataModels;
@@ -61,10 +62,11 @@ public partial class DataverseAIClient
     #region Constructors & Initialization
 
     public DataverseAIClient(HttpClient httpClient, IOptions<AzureAISettings> azureAISettings, 
-        IAuthenticationProvider authenticationProvider)
+        IAuthenticationProvider authenticationProvider, TimeProvider timeProvider)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _azureAISettings = azureAISettings;
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
 
         _openAIClient = new Lazy<OpenAIClient>(() =>
         {
@@ -184,6 +186,7 @@ public partial class DataverseAIClient
 
         listOfProperties = string.Join(", ", CanvasAppProperties.Properties.Keys.ToList());
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Each canvas app has following properties: {listOfProperties}"));
+
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Call a function if you need to get updated information"));
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Each function can be called multiple times"));
     }

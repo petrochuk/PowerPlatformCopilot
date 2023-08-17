@@ -1,10 +1,13 @@
+using AP2.DataverseAzureAI.Globalization;
+using Polly.Caching;
+
 namespace AP2.DataverseAzureAI.Extensions;
 
 public static class TimeExtensions
 {
-    public static string ToRelativeSentence(this DateTime value)
+    public static string ToRelativeSentence(this DateTimeOffset value, TimeProvider timeProvider)
     {
-        var now = DateTime.Now;
+        var now = timeProvider.GetLocalNow();
         var timeDiff = now - value;
 
         if (timeDiff.TotalMinutes < 2)
@@ -62,7 +65,7 @@ public static class TimeExtensions
         return "A long time ago, in a galaxy far far away...";
     }
 
-    public static string ToTimeOfDay(this DateTime dateTime, bool momentInTime = false)
+    public static string ToTimeOfDay(this DateTimeOffset dateTime, bool momentInTime = false)
     {
         if (dateTime.Hour < 3)
             return momentInTime ? "at night" : "night";
@@ -78,53 +81,50 @@ public static class TimeExtensions
         return momentInTime ? "in the evening" : "evening";
     }
 
-    public static bool RelativeEquals(this DateTime dateTime, string compareTo)
+    public static bool RelativeEquals(this DateTimeOffset dateTime, string compareTo, TimeProvider timeProvider)
     {
         if (string.IsNullOrWhiteSpace(compareTo))
             return false;
 
-        DateTime startDateTime, endDateTime;
+        DateTimeOffset startDateTime, endDateTime;
         compareTo = compareTo.Trim();
 
-        if (DateTime.TryParse(compareTo, out var compareToDateTime))
+        if (DateTimeOffset.TryParse(compareTo, out var compareToDateTime))
         {
             startDateTime = compareToDateTime.Date;
             endDateTime = startDateTime.AddDays(1);
         }
         else if (string.Compare(compareTo, "today", StringComparison.OrdinalIgnoreCase) == 0)
         {
-            startDateTime = DateTime.Now.Date;
+            startDateTime = timeProvider.GetLocalNow().Date;
             endDateTime = startDateTime.AddDays(1);
         }
         else if (string.Compare(compareTo, "yesterday", StringComparison.OrdinalIgnoreCase) == 0)
         {
-            startDateTime = DateTime.Now.AddDays(-1).Date;
+            startDateTime = timeProvider.GetLocalNow().AddDays(-1).Date;
             endDateTime = startDateTime.AddDays(1);
         }
         else if (string.Compare(compareTo, "tomorrow", StringComparison.OrdinalIgnoreCase) == 0)
         {
-            startDateTime = DateTime.Now.AddDays(1).Date;
+            startDateTime = timeProvider.GetLocalNow().AddDays(1).Date;
             endDateTime = startDateTime.AddDays(1);
         }
         else
         {
-            var parts = compareTo.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var parts = compareTo.Split(new[]{ ' ', '_', ':' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (parts.Length < 2)
             {
-                parts = compareTo.Split('_', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                if (parts.Length < 2)
-                {
-                    if (compareTo.StartsWith("last", StringComparison.OrdinalIgnoreCase))
-                        parts = new[] { "last", compareTo.Substring(4) };
-                    else if (compareTo.StartsWith("prev", StringComparison.OrdinalIgnoreCase))
-                        parts = new[] { "prev", compareTo.Substring(4) };
-                    else if (compareTo.StartsWith("previous", StringComparison.OrdinalIgnoreCase))
-                        parts = new[] { "previous", compareTo.Substring(8) };
-                    else if (compareTo.StartsWith("next", StringComparison.OrdinalIgnoreCase))
-                        parts = new[] { "next", compareTo.Substring(4) };
-                    else
-                        return false;
-                }
+                // Split concatenated words
+                if (compareTo.StartsWith("last", StringComparison.OrdinalIgnoreCase))
+                    parts = new[] { "last", compareTo.Substring(4) };
+                else if (compareTo.StartsWith("prev", StringComparison.OrdinalIgnoreCase))
+                    parts = new[] { "prev", compareTo.Substring(4) };
+                else if (compareTo.StartsWith("previous", StringComparison.OrdinalIgnoreCase))
+                    parts = new[] { "previous", compareTo.Substring(8) };
+                else if (compareTo.StartsWith("next", StringComparison.OrdinalIgnoreCase))
+                    parts = new[] { "next", compareTo.Substring(4) };
+                else
+                    return false;
             }
 
             if (parts.Length == 2)
@@ -133,25 +133,25 @@ public static class TimeExtensions
                     string.Compare(parts[0], "prev", StringComparison.OrdinalIgnoreCase) == 0 ||
                     string.Compare(parts[0], "previous", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    if (string.Compare(parts[1], "day", StringComparison.OrdinalIgnoreCase) == 0)
+                    if (Strings.Day.ContainsKey(parts[1]))
                     {
-                        startDateTime = DateTime.Now.AddDays(-1).Date;
+                        startDateTime = timeProvider.GetLocalNow().AddDays(-1).Date;
                         endDateTime = startDateTime.AddDays(1);
                     }
-                    else if (string.Compare(parts[1], "week", StringComparison.OrdinalIgnoreCase) == 0)
+                    else if (Strings.Week.ContainsKey(parts[1]))
                     {
-                        startDateTime = DateTime.Now.AddDays(-7).StartOfWeek(DayOfWeek.Sunday);
+                        startDateTime = timeProvider.GetLocalNow().AddDays(-7).StartOfWeek(DayOfWeek.Sunday);
                         endDateTime = startDateTime.AddDays(7);
                     }
-                    else if (string.Compare(parts[1], "month", StringComparison.OrdinalIgnoreCase) == 0)
+                    else if (Strings.Month.ContainsKey(parts[1]))
                     {
-                        startDateTime = (new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1)).AddMonths(-1);
+                        startDateTime = (new DateTime(timeProvider.GetLocalNow().Year, timeProvider.GetLocalNow().Month, 1)).AddMonths(-1);
                         endDateTime = startDateTime.AddMonths(1);
                     }
                     else if (string.Compare(parts[1], "year", StringComparison.OrdinalIgnoreCase) == 0)
                     {
-                        startDateTime = new DateTime(DateTime.Now.Year - 1, 1, 1);
-                        endDateTime = new DateTime(DateTime.Now.Year, 1, 1);
+                        startDateTime = new DateTime(timeProvider.GetLocalNow().Year - 1, 1, 1);
+                        endDateTime = new DateTime(timeProvider.GetLocalNow().Year, 1, 1);
                     }
                     else
                         return false;
@@ -159,45 +159,49 @@ public static class TimeExtensions
                 else // TODO add Next
                     return false;
             }
-            else if (parts.Length == 3)
+            else if (2 < parts.Length)
             {
-                if (!parts[1].TryParseToLong(out var total))
-                    return false;
-
                 if (string.Compare(parts[0], "last", StringComparison.OrdinalIgnoreCase) == 0 ||
                     string.Compare(parts[0], "prev", StringComparison.OrdinalIgnoreCase) == 0 ||
                     string.Compare(parts[0], "previous", StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    if (string.Compare(parts[2], "day", StringComparison.OrdinalIgnoreCase) == 0 ||
-                        string.Compare(parts[2], "days", StringComparison.OrdinalIgnoreCase) == 0 ||
-                        string.Compare(parts[2], "day(s)", StringComparison.OrdinalIgnoreCase) == 0)
-                    {
-                        startDateTime = DateTime.Now.AddDays(-total);
-                        endDateTime = DateTime.Now;
-                    }
-                    else if (string.Compare(parts[2], "week", StringComparison.OrdinalIgnoreCase) == 0 ||
-                            string.Compare(parts[2], "weeks", StringComparison.OrdinalIgnoreCase) == 0 ||
-                            string.Compare(parts[2], "week(s)", StringComparison.OrdinalIgnoreCase) == 0)
-                    {
-                        startDateTime = DateTime.Now.AddDays(-7 * total).StartOfWeek(DayOfWeek.Sunday);
-                        endDateTime = DateTime.Now;
-                    }
-                    else if (string.Compare(parts[2], "month", StringComparison.OrdinalIgnoreCase) == 0 ||
-                            string.Compare(parts[2], "months", StringComparison.OrdinalIgnoreCase) == 0 ||
-                            string.Compare(parts[2], "month(s)", StringComparison.OrdinalIgnoreCase) == 0)
-                    {
-                        startDateTime =DateTime.Now.AddMonths(-(int)total);
-                        endDateTime = DateTime.Now;
-                    }
-                    else if (string.Compare(parts[2], "year", StringComparison.OrdinalIgnoreCase) == 0 ||
-                            string.Compare(parts[2], "years", StringComparison.OrdinalIgnoreCase) == 0 ||
-                            string.Compare(parts[2], "year(s)", StringComparison.OrdinalIgnoreCase) == 0)
-                    {
-                        startDateTime = DateTime.Now.AddYears(-(int)total);
-                        endDateTime = DateTime.Now;
-                    }
-                    else
+                    if (!parts.TryGetTimeSpan(1, out var timeSpan))
                         return false;
+
+                    startDateTime = timeProvider.GetLocalNow().Subtract(timeSpan);
+                    endDateTime = timeProvider.GetLocalNow();
+                }
+                else if (Strings.Older.ContainsKey(parts[0]))
+                {
+                    if (!parts.TryGetTimeSpan(1, out var timeSpan))
+                        return false;
+
+                    startDateTime = DateTimeOffset.MinValue;
+                    endDateTime = timeProvider.GetLocalNow().Subtract(timeSpan);
+                }
+                else if (Strings.Older.ContainsKey($"{parts[0]} {parts[1]}"))
+                {
+                    if (!parts.TryGetTimeSpan(2, out var timeSpan))
+                        return false;
+
+                    startDateTime = DateTimeOffset.MinValue;
+                    endDateTime = timeProvider.GetLocalNow().Subtract(timeSpan);
+                }
+                else if (Strings.Newer.ContainsKey(parts[0]))
+                {
+                    if (!parts.TryGetTimeSpan(1, out var timeSpan))
+                        return false;
+
+                    startDateTime = timeProvider.GetLocalNow().Subtract(timeSpan);
+                    endDateTime = DateTimeOffset.MaxValue;
+                }
+                else if (Strings.Newer.ContainsKey($"{parts[0]} {parts[1]}"))
+                {
+                    if (!parts.TryGetTimeSpan(2, out var timeSpan))
+                        return false;
+
+                    startDateTime = timeProvider.GetLocalNow().Subtract(timeSpan);
+                    endDateTime = DateTimeOffset.MaxValue;
                 }
                 else // TODO add Next
                     return false;
@@ -209,13 +213,59 @@ public static class TimeExtensions
         return dateTime >= startDateTime && dateTime < endDateTime;
     }
 
-    public static DateTime StartOfWeek(this DateTime dateTime, DayOfWeek startOfWeek)
+    /// <summary>
+    /// Returns time offset from strings such as "1 day", "two week(s)", "3 months", "4 years"
+    /// </summary>
+    /// <param name="parts"></param>
+    /// <param name="startIndex"></param>
+    /// <param name="timeSpan"></param>
+    /// <returns></returns>
+    public static bool TryGetTimeSpan(this string[] parts, int startIndex, out TimeSpan timeSpan)
+    {
+        timeSpan = TimeSpan.Zero;
+
+        long total = 1;
+        int endIndex = parts.Length - 1;
+        if (string.Compare(parts[parts.Length - 1], "ago", StringComparison.OrdinalIgnoreCase) == 0)
+            endIndex--;
+
+        if (startIndex < endIndex)
+        {
+            if (!parts.TryParseToLong(startIndex, endIndex, out total))
+                return false;
+        }
+
+        if (Strings.Day.ContainsKey(parts[endIndex]))
+        {
+            timeSpan = TimeSpan.FromDays(total);
+            return true;
+        }
+        else if (Strings.Week.ContainsKey(parts[endIndex]))
+        {
+            timeSpan = TimeSpan.FromDays(7 * total);
+            return true;
+        }
+        else if (Strings.Month.ContainsKey(parts[endIndex]))
+        {
+            timeSpan = TimeSpan.FromDays(30 * total);
+            return true;
+        }
+        else if (Strings.Year.ContainsKey(parts[endIndex]))
+        {
+            timeSpan = TimeSpan.FromDays(365 * total);
+            return true;
+        }
+
+        return false;
+    }
+
+    public static DateTimeOffset StartOfWeek(this DateTimeOffset dateTime, DayOfWeek startOfWeek)
     {
         int diff = (7 + (dateTime.DayOfWeek - startOfWeek)) % 7;
         return dateTime.AddDays(-1 * diff).Date;
     }
 
-    public static string ToTimeOfYear(this DateTime dateTime)
+    public static string ToTimeOfYear(this DateTimeOffset dateTime)
     {
         if (dateTime.Month < 3)
             return "winter";

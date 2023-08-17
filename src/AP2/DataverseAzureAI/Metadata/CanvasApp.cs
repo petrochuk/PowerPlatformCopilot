@@ -43,14 +43,25 @@ public class CanvasAppProperties
     public DateTime AppVersion { get; set; }
     public DateTime LastDraftVersion { get; set; }
     public string LifeCycleId { get; set; }
-    public string Status { get; set; }
     public AppVersion CreatedByClientVersion { get; set; }
     public AppVersion MinClientVersion { get; set; }
     public AppUser Owner { get; set; }
+
     public AppUser CreatedBy { get; set; }
+    [JsonPropertyName("CreatedTime")]
+    public DateTime CreatedOn { get; set; }
+
     [JsonPropertyName("LastModifiedBy")]
     public AppUser ModifiedBy { get; set; }
-    public AppUser LastPublishedBy { get; set; }
+    [JsonPropertyName("LastModifiedTime")]
+    public DateTime ModifiedOn { get; set; }
+
+    [JsonPropertyName("LastPublishedBy")]
+    public AppUser PublishedBy { get; set; }
+    [JsonPropertyName("LastPublishTime")]
+    public DateTime PublishTime { get; set; }
+
+    //public string Status { get; set; }
     public string BackgroundColor { get; set; }
     public string BackgroundImageUri { get; set; }
     public string TeamsColorIconUrl { get; set; }
@@ -61,12 +72,6 @@ public class CanvasAppProperties
     public string Publisher { get; set; }
     public Appuris AppUris { get; set; }
 
-    [JsonPropertyName("CreatedTime")]
-    public DateTime CreatedOn { get; set; }
-
-    [JsonPropertyName("LastModifiedTime")]
-    public DateTime ModifiedOn { get; set; }
-    public DateTime LastPublishTime { get; set; }
     public int SharedGroupsCount { get; set; }
     public int SharedUsersCount { get; set; }
     public string appOpenProtocolUri { get; set; }

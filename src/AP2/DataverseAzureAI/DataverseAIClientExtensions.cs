@@ -25,6 +25,7 @@ public static class DataverseAIClientExtensions
         services.AddOptions<PowerPlatformSettings>().Bind(configuration.GetSection("PowerPlatform"));
         services.AddSingleton<IAuthenticationProvider, GraphAuthenticationProvider>();
         services.AddSingleton<GraphServiceClient>();
+        services.AddSingleton(TimeProvider.System);
 
         return services;
     }
