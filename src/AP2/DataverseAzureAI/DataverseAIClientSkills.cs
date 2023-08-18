@@ -289,13 +289,13 @@ public partial class DataverseAIClient
 
     [Description("Returns list of components inside Dataverse solutions. It can filter on component type, name or other properties")]
     public async Task<string> ListOSolutionComponents(
-    [Description("Dataverse solution friendly, or unique name, or solution id")]
+        [Description("Dataverse solution friendly, or unique name, or solution id")]
         string solutionName,
-    [Description("Property name or empty to return all Dataverse solutions")]
-        string propertyName,
-    [Description("Filter by property value")]
-        string propertyValueFilter,
-    [Description("Optional personal pronoun such as 'I', 'me', co-worker's first, last name, or full name for filters in addition to CreatedOn, ModifiedOn")]
+        [Description("Component type or empty to return all components")]
+        string componentType,
+        [Description("Component filter value")]
+        string componentFilterFilter,
+        [Description("Optional personal pronoun such as 'I', 'me', co-worker's first, last name, or full name for filters in addition to CreatedOn, ModifiedOn")]
         string userFirstLastOrPronoun)
     {
         var solutions = await _solutions.Value.ConfigureAwait(false);

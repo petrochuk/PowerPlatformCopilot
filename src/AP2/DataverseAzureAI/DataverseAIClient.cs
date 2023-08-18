@@ -131,7 +131,7 @@ public partial class DataverseAIClient
             if (EnvironmentId == Guid.Empty)
                 throw new InvalidOperationException($"{nameof(EnvironmentId)} is not set.");
 
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"solutions?$expand=createdby,modifiedby"));
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"solutions?$expand=createdby,modifiedby&$filter=isvisible eq true"));
             var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
