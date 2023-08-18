@@ -1,5 +1,12 @@
 # DataverseSamples
 
+## Dataverse AI Assistant / Copilot Demos
+
+- [Find Dataverse Solution and send email to owner](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#send-email)
+- [Translate Table Descriptions](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#translate-table-descriptions)
+- [Ask questions about Table Properties](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#table-properties)
+- [Ask questions about Canvas Apps](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#canvas-app-properties)
+
 ## Dataverse Copilot Demo with PAC CLI
 
 This sample demonstrates how to create a simple Dataverse Copilot using [Azure OpenAI](https://azure.microsoft.com/en-us/products/cognitive-services/openai-service),
