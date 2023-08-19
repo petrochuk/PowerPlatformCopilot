@@ -245,17 +245,26 @@ public partial class DataverseAIClient
         var responseMessage = response.Value.Choices[0].Message;
         while (responseMessage.FunctionCall != null && responseMessage.Role == ChatRole.Assistant)
         {
-            if (!_aIFunctionsCollection.Functions.TryGetValue(responseMessage.FunctionCall.Name, out var aiFunction))
-                throw new ApplicationException($"Unable to find function {responseMessage.FunctionCall.Name}");
+            if (_aIFunctionsCollection.Functions.TryGetValue(responseMessage.FunctionCall.Name, out var aiFunction))
+            {
+                var functionResponse = await aiFunction.Invoke(this, responseMessage.FunctionCall.Arguments).ConfigureAwait(false);
+                _chatOptions.Messages.Add(
+                    new ChatMessage(ChatRole.Function, functionResponse)
+                    {
+                        Name = responseMessage.FunctionCall.Name
+                    }
+                );
+            }
+            else
+            {
+                _chatOptions.Messages.Add(
+                    new ChatMessage(ChatRole.Function, $"Function '{responseMessage.FunctionCall.Name}' doesn't exist")
+                    {
+                        Name = responseMessage.FunctionCall.Name
+                    }
+                );
+            }
 
-            var functionResponse = await aiFunction.Invoke(this, responseMessage.FunctionCall.Arguments).ConfigureAwait(false);
-
-            _chatOptions.Messages.Add(
-                new ChatMessage(ChatRole.Function, functionResponse)
-                {
-                    Name = responseMessage.FunctionCall.Name
-                }
-            );
             response = await _openAIClient.Value.GetChatCompletionsAsync(OpenApiModelInternal, _chatOptions).ConfigureAwait(false);
             if (response == null || response.Value == null || response.Value.Choices == null || response.Value.Choices.Count <= 0)
                 throw new ApplicationException("Unable to get Azure Open AI response");
@@ -343,5 +352,33 @@ public partial class DataverseAIClient
         return new Uri(baseUri, query);
     }
 
+    public async Task<Dictionary<SolutionComponentType, Dictionary<Guid, SolutionComponent>>> LoadSolutionComponents(Guid solutionId)
+    {
+        var solutionComponents = new Dictionary<SolutionComponentType, Dictionary<Guid, SolutionComponent>>();
+        var query = $"solutioncomponents?$filter=_solutionid_value eq '{solutionId}'";
+        var uri = BuildOrgQueryUri(query);
+        var response = await _httpClient.GetAsync(uri);
+        response.EnsureSuccessStatusCode();
+        var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+
+        var solutionComponentsData = JsonSerializer.Deserialize<ODataContext<SolutionComponent>>(contentStream, _jsonSerializerOptions);
+        if (solutionComponentsData == null)
+            throw new InvalidOperationException("Failed to get list of solution components.");
+
+        foreach (var solutionComponent in solutionComponentsData.Values)
+        {
+            if (solutionComponent.ComponentType == null)
+                continue;
+
+            if (!solutionComponents.TryGetValue(solutionComponent.ComponentType.Value, out var solutionComponentType))
+            {
+                solutionComponentType = new Dictionary<Guid, SolutionComponent>();
+                solutionComponents.Add(solutionComponent.ComponentType.Value, solutionComponentType);
+            }
+            solutionComponentType.Add(solutionComponent.Objectid, solutionComponent);
+        }
+
+        return solutionComponents;
+    }
     #endregion
 }

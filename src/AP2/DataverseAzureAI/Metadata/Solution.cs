@@ -50,7 +50,7 @@ public class Solution
     public string ModifiedBySystemUserId { get; set; }
 
     [JsonIgnore]
-    public Dictionary<Guid, SolutionComponent>? Components { get; set; }
+    public Dictionary<SolutionComponentType, Dictionary<Guid, SolutionComponent>>? Components { get; set; }
 
     public void LoadComponents()
     {

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using System.Text;
 using AP2.DataverseAzureAI.Extensions;
 using AP2.DataverseAzureAI.Globalization;
 using AP2.DataverseAzureAI.Metadata;
@@ -289,7 +290,7 @@ public partial class DataverseAIClient
 
     [Description("Returns list of components inside Dataverse solutions. It can filter on component type, name or other properties")]
     public async Task<string> ListOSolutionComponents(
-        [Description("Dataverse solution friendly, or unique name, or solution id")]
+        [Required, Description("Dataverse solution friendly, or unique name, or solution id")]
         string solutionName,
         [Description("Component type or empty to return all components")]
         string componentType,
@@ -307,10 +308,14 @@ public partial class DataverseAIClient
             if (string.Compare(solution.FriendlyName, solutionName, StringComparison.OrdinalIgnoreCase) != 0)
                 continue;
 
-            if (solution.Components == null)
+            solution.Components ??= await LoadSolutionComponents(solution.SolutionId);
+            var response = new StringBuilder();
+            foreach (var componentsByType in solution.Components)
             {
-
+                if (Enum.IsDefined(typeof(SolutionComponentType), componentsByType.Key))
+                    response.AppendLine($"{componentsByType.Key}(s): {componentsByType.Value.Count}");
             }
+            return $"{solutionName} contains: {response}";
         }
 
         return "Not implemented yet";
