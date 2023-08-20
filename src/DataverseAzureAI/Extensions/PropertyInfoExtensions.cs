@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Reflection;
+using System.Text;
 using AP2.DataverseAzureAI.Metadata;
 
 namespace AP2.DataverseAzureAI.Extensions;
@@ -70,5 +72,24 @@ public static class PropertyInfoExtensions
             return ((int)leftValue).CompareTo((int)rightValue);
 
         return string.Compare(leftValue.ToString(), rightValue.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string ToBrowsableProperties(this IReadOnlyCollection<PropertyInfo> properties)
+    {
+        _ = properties ?? throw new ArgumentNullException(nameof(properties));
+
+        var sb = new StringBuilder();
+        foreach (var property in properties)
+        {
+            var browsableAttribute = property.GetCustomAttribute<BrowsableAttribute>();
+            if (browsableAttribute != null && !browsableAttribute.Browsable)
+                continue;
+
+            if (sb.Length <= 0)
+                sb.Append(property.Name);
+            else
+                sb.Append($", {property.Name}");
+        }
+        return sb.ToString();
     }
 }

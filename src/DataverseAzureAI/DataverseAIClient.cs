@@ -1,4 +1,5 @@
 #region using
+using AP2.DataverseAzureAI.Extensions;
 using AP2.DataverseAzureAI.Metadata;
 using AP2.DataverseAzureAI.OData;
 using AP2.DataverseAzureAI.Settings;
@@ -7,8 +8,10 @@ using Azure.AI.OpenAI;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Microsoft.Kiota.Abstractions.Authentication;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 using System.Text.Json;
 #endregion
 
@@ -184,7 +187,7 @@ public partial class DataverseAIClient
         listOfProperties = string.Join(", ", Solution.Properties.Keys.ToList());
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Each Dataverse solution has following properties: {listOfProperties}"));
 
-        listOfProperties = string.Join(", ", CanvasAppProperties.Properties.Keys.ToList());
+        listOfProperties = string.Join(", ", CanvasAppProperties.Properties.Values.ToBrowsableProperties());
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Each canvas app has following properties: {listOfProperties}"));
 
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Call a function if you need to get updated information"));

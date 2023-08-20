@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json.Serialization;
@@ -37,6 +38,7 @@ public class Tags
 
 public class CanvasAppProperties
 {
+    [Browsable(false)]
     public static Dictionary<string, PropertyInfo> Properties
     { get; } = typeof(CanvasAppProperties).GetProperties().ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
 
@@ -61,7 +63,9 @@ public class CanvasAppProperties
     [JsonPropertyName("LastPublishTime")]
     public DateTime PublishTime { get; set; }
 
-    //public string Status { get; set; }
+    [Browsable(false)]
+    public string Status { get; set; }
+
     public string BackgroundColor { get; set; }
     public string BackgroundImageUri { get; set; }
     public string TeamsColorIconUrl { get; set; }
