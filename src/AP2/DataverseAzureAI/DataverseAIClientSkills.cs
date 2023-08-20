@@ -409,10 +409,84 @@ public partial class DataverseAIClient
 
     #endregion
 
+
+    #region Save to file system
+
+    [Description("Save to file system: text output, apps, solutions, lists or any other Power Platform component")]
+    public async Task<string> SaveToFileSystem(
+        [Required, Description("Type of an item to save")]
+        string itemType,
+        [Required, Description("Name for an item")]
+        string itemName,
+        [Description("Folder name or file name")]
+        string saveLocation)
+    {
+        if (string.IsNullOrWhiteSpace(itemType))
+            return "Type of an item is required";
+        if (string.IsNullOrWhiteSpace(itemName))
+            return "Name for an item is required";
+
+        itemType = itemType.Trim().Replace(" ", "");
+        if (string.Compare(itemType, SolutionComponentType.CanvasApp.ToString(), StringComparison.OrdinalIgnoreCase) == 0)
+        {
+            if (string.IsNullOrWhiteSpace(saveLocation))
+                return "You need to ask user for directory name to save the app";
+
+            var filePath = string.Empty;
+            if (!Directory.Exists(saveLocation))
+            {
+                var dirs = Directory.GetDirectories(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "*", SearchOption.AllDirectories);
+                foreach (var dir in dirs)
+                {
+                    if (dir.EndsWith(saveLocation, StringComparison.OrdinalIgnoreCase))
+                    {
+                        filePath = dir;
+                        break;
+                    }
+                }
+            }
+            else
+                filePath = saveLocation;
+
+            if (string.IsNullOrWhiteSpace(filePath))
+                return $"Directory '{saveLocation}' doesn't exist. You need to ask user for different directory name";
+
+            var canvasApps = await _canvasApps.Value.ConfigureAwait(false);
+            foreach (var canvasApp in canvasApps)
+            {
+                if (string.Equals(itemName, canvasApp.Properties.DisplayName, StringComparison.OrdinalIgnoreCase))
+                {
+                    filePath = Path.Combine(filePath, $"{canvasApp.Properties.DisplayName}.msapp");
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine();
+                    Console.Write($"Do you want to save Canvas App '{itemName}' to '{filePath}'? [Yes]/No:");
+                    Console.ResetColor();
+                    var response = Console.ReadLine();
+                    if (string.IsNullOrWhiteSpace(response) ||
+                        response.Equals("Yes", StringComparison.OrdinalIgnoreCase) ||
+                        response.Equals("Y", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Download the app to file
+                        var responseStream = await _httpClient.GetStreamAsync(canvasApp.Properties.AppUris.documentUri.value);
+                        using var fileStream = new FileStream(filePath, FileMode.Create);
+                        responseStream.CopyTo(fileStream);
+                        Console.WriteLine($"Done");
+                        return $"Canvas App '{itemName}' was saved.";
+                    }
+                }
+            }
+            return $"Canvas App '{itemName}' is not found.";
+        }
+        return $"Don't know how to save {itemType} type of item yet";
+    }
+
+    #endregion
+
+
     #region Create
 
     [Description("Creates new items, records or anything else inside PowerPlatform including but not limited to apps, solutions, tables, users, components")]
-    public Task<string> CreateItemInsidePowerPlatorm(
+    public Task<string> CreateItemInsidePowerPlatform(
         [Description("Type of an item to create")]
         string itemType,
         [Description("Name for an item")]

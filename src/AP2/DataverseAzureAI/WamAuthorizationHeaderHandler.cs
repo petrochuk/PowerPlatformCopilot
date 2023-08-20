@@ -35,12 +35,17 @@ public class WamAuthorizationHeaderHandler : DelegatingHandler
         var authority = request.RequestUri!.GetLeftPart(UriPartial.Authority);
         if (authority.EndsWith("api.powerplatform.com", StringComparison.OrdinalIgnoreCase))
             authority = "https://api.powerplatform.com";
+        else if (authority.EndsWith("blob.core.windows.net", StringComparison.OrdinalIgnoreCase))
+            authority = null;
 
-        var result = await _publicClientApplication.Value.AcquireTokenSilent(
-            new string[] { $"{authority}//.default" },
-            PublicClientApplication.OperatingSystemAccount).ExecuteAsync().ConfigureAwait(false);
+        if (authority != null)
+        {
+            var result = await _publicClientApplication.Value.AcquireTokenSilent(
+                new string[] { $"{authority}//.default" },
+                PublicClientApplication.OperatingSystemAccount).ExecuteAsync().ConfigureAwait(false);
 
-        request.Headers.Add("Authorization", new string[] { $"Bearer {result.AccessToken}" });
+            request.Headers.Add("Authorization", new string[] { $"Bearer {result.AccessToken}" });
+        }
 
         return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
     }

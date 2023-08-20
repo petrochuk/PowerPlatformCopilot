@@ -51,7 +51,7 @@ public partial class DataverseAIClient
     private readonly ChatCompletionsOptions _chatOptions = new ()
     {
         Temperature = 1,
-        MaxTokens = 800,
+        MaxTokens = 500,
         NucleusSamplingFactor = (float)0.95,
         FrequencyPenalty = 0,
         PresencePenalty = 0,
@@ -189,6 +189,8 @@ public partial class DataverseAIClient
 
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Call a function if you need to get updated information"));
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Each function can be called multiple times"));
+        _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"You can ask clarifying questions if function needs required parameter"));
+        _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Do not try to predict required parameter"));
     }
 
     #endregion

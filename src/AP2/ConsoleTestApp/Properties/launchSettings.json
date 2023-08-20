@@ -2,7 +2,7 @@
   "profiles": {
     "ConsoleTestApp": {
       "commandName": "Project",
-      "commandLineArgs": "\"which solutions have flows?\""
+      "commandLineArgs": "\"which canvas apps do i have?\""
     }
   }
 }
