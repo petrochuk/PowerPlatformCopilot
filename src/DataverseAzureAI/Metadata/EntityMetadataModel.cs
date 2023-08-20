@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json.Serialization;
 
-namespace AP2.DataverseAzureAI;
+namespace AP2.DataverseAzureAI.Metadata;
 
 // Classes used for serialization/deserialization
 #pragma warning disable CA1056 // URI-like properties should not be strings

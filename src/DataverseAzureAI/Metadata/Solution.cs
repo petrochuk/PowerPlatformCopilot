@@ -51,7 +51,7 @@ public class Solution
     [JsonPropertyName("_modifiedby_value")]
     public string ModifiedBySystemUserId { get; set; }
 
-    [JsonIgnore]
+    [JsonIgnore, Browsable(false)]
     public Dictionary<SolutionComponentType, Dictionary<Guid, SolutionComponent>>? Components { get; set; }
 
     public override string ToString()

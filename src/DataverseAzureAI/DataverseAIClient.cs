@@ -8,10 +8,8 @@ using Azure.AI.OpenAI;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Microsoft.Kiota.Abstractions.Authentication;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
-using System.Reflection;
 using System.Text.Json;
 #endregion
 
@@ -380,7 +378,7 @@ public partial class DataverseAIClient
                 solutionComponentType = new Dictionary<Guid, SolutionComponent>();
                 solutionComponents.Add(solutionComponent.ComponentType.Value, solutionComponentType);
             }
-            solutionComponentType.Add(solutionComponent.Objectid, solutionComponent);
+            solutionComponentType.Add(solutionComponent.ObjectId, solutionComponent);
         }
 
         return solutionComponents;
