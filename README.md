@@ -1,49 +1,52 @@
-# DataverseSamples
+# Experimental: Dataverse AI Assistant (Copilot)
 
-## Dataverse AI Assistant / Copilot Demos
+This is an experimental project to explore the use of Azure AI services with Microsoft Power Platform. 
+The project is based on the [Dataverse Web API](https://docs.microsoft.com/en-us/powerapps/developer/data-platform/webapi/overview) and 
+the [Azure Cognitive Services](https://azure.microsoft.com/en-us/services/cognitive-services/) with use of Azure AI Functions.
 
-- [Find Dataverse Solution and send email to owner](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#send-email)
-- [Translate Table Descriptions](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#translate-table-descriptions)
-- [Ask questions about Table Properties](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#table-properties)
-- [Ask questions about Canvas Apps](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#canvas-app-properties)
-- [Save Canvas Apps as msapp file to local folder](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#save-msapp-file)
+It can be used as a starting point for building your own Copilot/AI Assistant for Microsoft Power Platform. ConsoleTestApp is a sample console application that demonstrates how to use it. You can add more skills to DataverseAIClient class or derive from it to create your own client. During runtime, the client will automatically discover all skills and their parameters.
 
-## Dataverse Copilot Demo with PAC CLI
+## Demos
 
-This sample demonstrates how to create a simple Dataverse Copilot using [Azure OpenAI](https://azure.microsoft.com/en-us/products/cognitive-services/openai-service),
-with help of [Power Platform CLI library](https://learn.microsoft.com/en-us/power-platform/developer/cli/introduction) 
-to clean and prepare FetchXML queries, access data stored in Dataverse, plus [embeddings with Azure OpenAI](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/how-to/embeddings?tabs=console)
-to enrich prompt with table metadata.
+[Watch Short Demos](src/docs/Demos.md)
 
-There is no need to modify your Dataverse environment. It can connect to any current production Microsoft Dataverse environment.
+- [Find Dataverse Solution and send email to owner](src/docs/Demos.md#send-email)
+- [Translate Table Descriptions](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#translate-table-descriptions)
+- [Ask questions about Table Properties](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#table-properties)
+- [Ask questions about Canvas Apps](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#canvas-app-properties)
+- [Save Canvas Apps as msapp file to local folder](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#save-msapp-file)
 
-The sample can use chat or completion API with [ChatGPT-3.5 turbo or ChatGPT-4](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/how-to/chatgpt?pivots=programming-language-chat-completions)
-model.
+## Contributing
 
-OpenAI and Dataverse endpoints can be configured in the `appSettings.json` file.
+This project is welcoming contributions. If you have any questions, feel free to start a [discussion](https://github.com/petrochuk/PowerPlatformCopilot/discussions).
 
-### Interact with data in Dataverse 
+## Dataverse AI Assistant Skills/Functons
 
-![Dataverse Copilot Demo with PAC CLI](media/all-accounts-search.gif)
+The following skills are implemented as Azure AI Functions in [DataverseAIClientSkills.cs](src/DataverseAzureAI/DataverseAIClientSkills.cs):
 
-### Using custom tables with joins and filters
+| Skill | Description |
+| ----- | ----------- |
+| FindTableByName | Find Dataverse table or entity by exact or partial name |
+| ListOfTablesByPropertyValue | Returns filtered list of tables based on specified property value |
+| GetTablePropertyValue | Returns property value for specified table |
+| ListOfModelDrivenAppsByPropertyValue | Returns filtered list of Model-driven PowerApps based on specified property value |
+| FindCanvasApp | Finds a canvas app based on specified property value
+| ListOfCanvasAppsByPropertyValue | Returns filtered list of canvas PowerApps based on specified property value |
+| GetCanvasAppPropertyValue | Returns property value for a canvas app |
+| ListOSolutionsByPropertyValue | Returns filtered list of Dataverse solutions based on specified property value and optional user |
+| ListOSolutionComponents | Returns list of components inside Dataverse solutions. It can filter on component type, name or other properties |
+| GetSolutionPropertyValue | Returns property value for specified Dataverse solution |
+| SendEmailOrShareLinkWithSomeone | Sends an email or shares a link to an item, record or anything else inside PowerPlatform including but not limited to app, solution, table, component |
+| SaveToFileSystem | Save to file system: text output, apps, solutions, lists or any other Power Platform component |
+| CreateItemInsidePowerPlatform | Creates new items, records or anything else inside PowerPlatform including but not limited to apps, solutions, tables, users, components |
 
-![Custom Table](media/custom_table.gif)
+## Running the project
 
-### Export to Excel
+Open appSettings.json and update the following settings:
 
-Ask Copilot for any data from Dataverse and export it to Excel
-
-![Custom Table](media/AI-to-excel.png)
-
-### Functional flow block diagram
-
-1. User types query in natural language for example: "show me all accounts"	
-2. The Copilot example app adds system prompt to the query: "return only FetchXML queries" to instruct AI model to respond with FetchXML queries only
-3. AL model resonds with FetchXML query but it cannot be executed because metadata doesn't match current Dataverse environment
-4. The app modifies the FetchXML query to fix metadata for tables, attributes, links etc by quering Dataverse metadata API
-5. After query matches current Dataverse environment the app executes the query and displays results
-6. User can clarify and imporve the query by adding more details like "with name coffee" and chat process starts over again at step 2
-
-![Custom Table](media/FunctionalFlow.png)
-
+| Section | Setting | Description |
+| ------- | ------- | ----------- |
+| TestApp | EnvironmentId | Dataverse environment id |
+| AzureAI | OpenApiEndPoint | Azure AI Open API endpoint |
+| AzureAI | OpenApiKey | Azure AI Open API key |
+| AzureAI | OpenApiModel | Azure AI Open API model which supports Azure AI Functions version **0613** of gpt-35-turbo, gpt-35-turbo-16k, gpt-4, and gpt-4-32k |
