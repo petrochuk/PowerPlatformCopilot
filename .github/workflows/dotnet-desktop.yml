@@ -24,7 +24,7 @@ jobs:
                              # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
 
     env:
-      Solution_Name: src/AP2/AP2.sln
+      Solution_Name: src/AP2.sln
       GITHUB_TOKEN: ${{ github.TOKEN }}
 
     steps:
@@ -52,12 +52,12 @@ jobs:
       uses: actions/upload-artifact@v3
       with: 
         name: DataverseAzureAI
-        path: src/AP2/DataverseAzureAI/bin/${{ matrix.configuration }}/net8.0/publish
+        path: src/DataverseAzureAI/bin/${{ matrix.configuration }}/net8.0/publish
         if-no-files-found: error
 
     - name: Upload ConsoleTestApp Artifacts
       uses: actions/upload-artifact@v3
       with: 
         name: ConsoleTestApp
-        path: src/AP2/ConsoleTestApp/bin/${{ matrix.configuration }}/net8.0/publish
+        path: src/ConsoleTestApp/bin/${{ matrix.configuration }}/net8.0/publish
         if-no-files-found: error
