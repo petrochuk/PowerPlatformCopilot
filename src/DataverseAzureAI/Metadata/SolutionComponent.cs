@@ -8,13 +8,13 @@ public class SolutionComponent
 {
     [JsonPropertyName("_modifiedby_value")]
     public string ModifiedBySystemUserId { get; set; }
-    public DateTime modifiedon { get; set; }
+    public DateTime ModifiedOn { get; set; }
 
-    public DateTime createdon { get; set; }
+    public DateTime CreatedOn { get; set; }
     [JsonPropertyName("_createdby_value")]
     public string CreatedBySystemUserId { get; set; }
 
-    public Guid Objectid { get; set; }
+    public Guid ObjectId { get; set; }
     public Guid SolutionComponentId { get; set; }
     public SolutionComponentType? ComponentType { get; set; }
     public int? RootComponentBehavior { get; set; }

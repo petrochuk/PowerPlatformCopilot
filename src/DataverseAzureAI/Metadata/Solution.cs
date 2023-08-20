@@ -1,13 +1,15 @@
-using AP2.DataverseAzureAI.OData;
-using System.Net.Http;
+using System.ComponentModel;
 using System.Reflection;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace AP2.DataverseAzureAI.Metadata;
 
+/// <summary>
+/// Power Platform Solution
+/// </summary>
 public class Solution
 {
+    [Browsable(false)]
     public static Dictionary<string, PropertyInfo> Properties { get; }
         = typeof(Solution).GetProperties().ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
 
@@ -51,30 +53,6 @@ public class Solution
 
     [JsonIgnore]
     public Dictionary<SolutionComponentType, Dictionary<Guid, SolutionComponent>>? Components { get; set; }
-
-    public void LoadComponents()
-    {
-        if (Components != null)
-            return;
-
-        /*
-        _canvasApps = new Lazy<Task<IList<CanvasApp>>>(async () =>
-        {
-            if (EnvironmentId == Guid.Empty)
-                throw new InvalidOperationException($"{nameof(EnvironmentId)} is not set.");
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildApiQueryUri($"powerapps/apps?%24expand=permissions%28%24filter%3DmaxAssignedTo%28%27{UserObjectId}%27%29%29&%24filter=classification+eq+%27SharedWithMeApps%27+and+environment+eq+%27{EnvironmentId}%27&api-version=1"));
-            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-
-            var appModules = JsonSerializer.Deserialize<ODataContext<CanvasApp>>(contentStream, _jsonSerializerOptions);
-            if (appModules == null)
-                throw new InvalidOperationException("Failed to get list of PowerApps.");
-            return appModules.Values;
-        });
-        */
-    }
 
     public override string ToString()
     {

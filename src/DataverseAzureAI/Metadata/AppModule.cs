@@ -1,12 +1,17 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json.Serialization;
 
 namespace AP2.DataverseAzureAI.Metadata;
 
+/// <summary>
+/// Model Driven App
+/// </summary>
 [DebuggerDisplay("{Name}")]
 public class AppModule
 {
+    [Browsable(false)]
     public static Dictionary<string, PropertyInfo> Properties
     { get; } = typeof(AppModule).GetProperties().ToDictionary(p => p.Name, p => p, StringComparer.OrdinalIgnoreCase);
 
