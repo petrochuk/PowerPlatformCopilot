@@ -6,6 +6,7 @@
 - [Translate Table Descriptions](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#translate-table-descriptions)
 - [Ask questions about Table Properties](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#table-properties)
 - [Ask questions about Canvas Apps](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#canvas-app-properties)
+- [Save Canvas Apps as msapp file to local folder](https://github.com/petrochuk/DataverseSamples/blob/main/src/AP2/docs/Demos.md#save-msapp-file)
 
 ## Dataverse Copilot Demo with PAC CLI
 
