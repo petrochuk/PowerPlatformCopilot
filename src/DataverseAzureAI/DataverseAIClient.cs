@@ -179,10 +179,10 @@ public partial class DataverseAIClient
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"You are an assistant, helping '{FullName}' interact with Microsoft Power Platform."));
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"You are assisting **{FullName}**"));
 
-        var listOfProperties = string.Join(", ", EntityMetadataModel.Properties.Keys.ToList());
+        var listOfProperties = string.Join(", ", EntityMetadataModel.Properties.Values.ToBrowsableProperties());
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Each Dataverse table or entity has following properties: {listOfProperties}"));
 
-        listOfProperties = string.Join(", ", Solution.Properties.Keys.ToList());
+        listOfProperties = string.Join(", ", Solution.Properties.Values.ToBrowsableProperties());
         _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Each Dataverse solution has following properties: {listOfProperties}"));
 
         listOfProperties = string.Join(", ", CanvasAppProperties.Properties.Values.ToBrowsableProperties());

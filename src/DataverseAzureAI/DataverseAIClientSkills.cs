@@ -241,7 +241,7 @@ public partial class DataverseAIClient
 
     #region Assistant skill functions for Dataverse Solutions
 
-    [Description("Returns filtered list of Dataverse solutions based on specified property value and optional user")]
+    [Description("Returns filtered list of solutions installed/imported based on specified property value and optional user")]
     public async Task<string> ListOSolutionsByPropertyValue(
         [Description("Property name or empty to return all Dataverse solutions")]
         string propertyName,
@@ -332,6 +332,9 @@ public partial class DataverseAIClient
             return "Solution name is required";
         if (string.IsNullOrWhiteSpace(propertyName) || !Solution.Properties.TryGetValue(propertyName, out var propertyInfo))
             return PropertyNotFound;
+        if (propertyInfo.Name == nameof(Solution.Components))
+            return $"call {nameof(ListOSolutionComponents)}";
+
         solutionName = solutionName.Trim();
 
         var solutions = await _solutions.Value.ConfigureAwait(false);
@@ -409,7 +412,6 @@ public partial class DataverseAIClient
 
     #endregion
 
-
     #region Save to file system
 
     [Description("Save to file system: text output, apps, solutions, lists or any other Power Platform component")]
@@ -481,7 +483,6 @@ public partial class DataverseAIClient
     }
 
     #endregion
-
 
     #region Create
 

@@ -14,6 +14,7 @@ It can be used as a starting point for building your own Copilot/AI Assistant fo
 - [Ask questions about Table Properties](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#table-properties)
 - [Ask questions about Canvas Apps](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#canvas-app-properties)
 - [Save Canvas Apps as msapp file to local folder](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#save-msapp-file)
+- [List available solutions and whats inside them ](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#solution-components)
 
 ## Contributing
 
