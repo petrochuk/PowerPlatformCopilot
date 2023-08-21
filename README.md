@@ -1,5 +1,8 @@
 # Experimental: Copilot/AI Assistant for Microsoft Power Platform
 
+> [!WARNING]
+> **This repository is still work-in-progress and expected to undergo significant changes**
+
 This is an experimental project to explore the use of Azure AI services with Microsoft Power Platform. 
 It is based on the [Dataverse Web API](https://docs.microsoft.com/en-us/powerapps/developer/data-platform/webapi/overview) and the [Azure Cognitive Services](https://azure.microsoft.com/en-us/services/cognitive-services/) with use of [Azure AI Functions](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/function-calling).
 
