@@ -1,5 +1,8 @@
 # Experimental: Copilot/AI Assistant for Microsoft Power Platform
 
+> [!WARNING]
+> **This repository is still work-in-progress and expected to undergo significant changes**
+
 This is an experimental project to explore the use of Azure AI services with Microsoft Power Platform. 
 It is based on the [Dataverse Web API](https://docs.microsoft.com/en-us/powerapps/developer/data-platform/webapi/overview) and the [Azure Cognitive Services](https://azure.microsoft.com/en-us/services/cognitive-services/) with use of [Azure AI Functions](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/function-calling).
 
@@ -14,6 +17,7 @@ It can be used as a starting point for building your own Copilot/AI Assistant fo
 - [Ask questions about Table Properties](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#table-properties)
 - [Ask questions about Canvas Apps](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#canvas-app-properties)
 - [Save Canvas Apps as msapp file to local folder](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#save-msapp-file)
+- [List available solutions and whats inside them ](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#solution-components)
 
 ## Contributing
 

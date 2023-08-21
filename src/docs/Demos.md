@@ -25,3 +25,8 @@ and sends an email to the owner with a AI generated question (click play):
 
 Dataverse AI downloads canvas app as msapp file and saves it local folder (click play):
 ![Send Email](assets/images/SaveMsapp.gif)
+
+## Solution Components
+
+Assistant lists available solutions and whats inside them (click play):
+![Send Email](assets/images/SolutionComponents.gif)
