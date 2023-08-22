@@ -30,3 +30,8 @@ Dataverse AI downloads canvas app as msapp file and saves it local folder (click
 
 Assistant lists available solutions and whats inside them (click play):
 ![Send Email](assets/images/SolutionComponents.gif)
+
+## Assign Roles
+
+It has never been easier to assign roles in Power Platform (click play):
+![Send Email](assets/images/AssignRole.gif)

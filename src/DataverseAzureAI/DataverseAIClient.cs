@@ -449,7 +449,7 @@ public partial class DataverseAIClient
     {
         Console.ForegroundColor = ConsoleColor.Yellow;
         Console.WriteLine();
-        Console.Write($"{action} [Yes]/No:");
+        Console.Write($"{action} [Yes]/No: ");
         Console.ResetColor();
         var response = Console.ReadLine();
         if (string.IsNullOrWhiteSpace(response))
