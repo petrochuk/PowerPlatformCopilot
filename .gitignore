@@ -13,6 +13,7 @@
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 app[Ss]ettings.[Dd]ebug.json
+launch[Ss]ettings.json
 
 # Mono auto generated files
 mono_crash.*

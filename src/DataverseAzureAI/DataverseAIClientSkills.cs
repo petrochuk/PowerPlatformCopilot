@@ -371,43 +371,31 @@ public partial class DataverseAIClient
         if (string.IsNullOrWhiteSpace(personName))
             return "Person name is required";
 
-        personName = personName.Trim();
+        var person = await FindPersonViaGraph(personName).ConfigureAwait(false);
+        if (person == null) 
+            return $"Unable to find {personName}";
 
-        var people = await _graphClient.Value.Me.People.GetAsync().ConfigureAwait(false);
-        if (people == null || people.Value == null || people.Value.Count <= 0) 
-            return "Unable to find list of people";
-
-        foreach (var person in people.Value)
+        var message = new Message
         {
-            if (string.Compare(person.DisplayName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
-                string.Compare(person.GivenName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
-                string.Compare(person.Surname, personName, StringComparison.OrdinalIgnoreCase) == 0)
+            Subject = emailTitle,
+            Body = new ItemBody
             {
-                var mesg = new Message
-                {
-                    Subject = emailTitle,
-                    Body = new ItemBody
-                    {
-                        ContentType = BodyType.Html,
-                        Content = emailBody
-                    },
-                    ToRecipients = new List<Recipient>
-                    {
-                        new Recipient { EmailAddress = new EmailAddress { Address = person.UserPrincipalName } },
-                    }
-                };
-
-                Microsoft.Graph.Me.SendMail.SendMailPostRequestBody body = new()
-                {
-                    Message = mesg,
-                    SaveToSentItems = false
-                };
-                await _graphClient.Value.Me.SendMail.PostAsync(body);
-                return $"Sent message to {person.DisplayName} ({person.UserPrincipalName})";
+                ContentType = BodyType.Html,
+                Content = emailBody
+            },
+            ToRecipients = new List<Recipient>
+            {
+                new Recipient { EmailAddress = new EmailAddress { Address = person.UserPrincipalName } },
             }
-        }
+        };
 
-        return "Not implemented yet";
+        Microsoft.Graph.Me.SendMail.SendMailPostRequestBody body = new()
+        {
+            Message = message,
+            SaveToSentItems = false
+        };
+        await _graphClient.Value.Me.SendMail.PostAsync(body);
+        return $"Sent message to {person.DisplayName} ({person.UserPrincipalName})";
     }
 
     #endregion
@@ -494,6 +482,58 @@ public partial class DataverseAIClient
         string itemName)
     {
         return Task.FromResult("Not implemented yet");
+    }
+
+    #endregion
+
+    #region Update permissions
+
+    [Description("Updates user permission inside Power Platform")]
+    public async Task<string> UpdateUserPermission(
+        [Required, Description("Grant or Revoke permission")]
+        string changeType,
+        [Required, Description("Person's first name, last name or a email to send email to or share link with")]
+        string personName,
+        [Required, Description("Role name")]
+        string roleName,
+        [Description("Optional business unit role belongs to")]
+        string businessUnit)
+    {
+        if (string.IsNullOrWhiteSpace(changeType))
+            return "Change type is required";
+
+        if (string.IsNullOrWhiteSpace(roleName))
+            return "Role name is required";
+
+        // Send async requests in parallel
+        var systemUsers = await _systemUsers.Value.ConfigureAwait(false);
+        var person = await FindPersonViaGraph(personName).ConfigureAwait(false);
+        var roles = await _roles.Value.ConfigureAwait(false);
+
+        if (person == null)
+            return $"Unable to find {personName}";
+
+        var systemUser = systemUsers.FirstOrDefault(s => string.Equals(s.InternalEmailAddress, person.UserPrincipalName, StringComparison.OrdinalIgnoreCase));
+        if (systemUser == null)
+            return $"Unable to find {personName} in {EnvironmentInstance.FriendlyName}";
+
+        if (string.IsNullOrWhiteSpace(businessUnit))
+            businessUnit = EnvironmentInstance.UrlName;
+
+        var role = roles.FirstOrDefault(r => string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase) &&
+                                             string.Equals(r.BusinessUnit.Name, businessUnit, StringComparison.OrdinalIgnoreCase));
+        if (role == null)
+            return $"Unable to find role {roleName} in {EnvironmentInstance.FriendlyName}";
+
+        if (!ConfirmAction($"Do you want to grant '{role.BusinessUnit.Name}/{role.Name}' role to {systemUser.FullName}?"))
+            return UserDeclinedAction;
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgQueryUri($"systemusers({systemUser.SystemUserId})/systemuserroles_association/$ref"));
+        request.Content = new StringContent($"{{\"@odata.id\":\"{BuildOrgQueryUri($"roles({role.RoleId})")}\"}}", Encoding.UTF8, "application/json");
+        var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        return $"Granted '{role.BusinessUnit.Name}/{role.Name}' role to {systemUser.FullName}";
     }
 
     #endregion

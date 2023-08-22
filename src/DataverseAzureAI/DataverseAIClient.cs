@@ -7,6 +7,8 @@ using Azure;
 using Azure.AI.OpenAI;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
+using Microsoft.Graph.Models.Security;
 using Microsoft.Kiota.Abstractions.Authentication;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
@@ -27,6 +29,7 @@ public partial class DataverseAIClient
     const string AttributeNotFound = "Attribute not found";
     const string First = "First";
     const string Last = "Last";
+    const string UserDeclinedAction = "User declined to perform the action";
 
     #endregion
 
@@ -45,6 +48,8 @@ public partial class DataverseAIClient
     private readonly Lazy<Task<IList<AppModule>>> _appModules;
     private readonly Lazy<Task<IList<CanvasApp>>> _canvasApps;
     private readonly Lazy<Task<IList<Solution>>> _solutions;
+    private readonly Lazy<Task<IList<SystemUser>>> _systemUsers;
+    private readonly Lazy<Task<IList<Role>>> _roles;
     private string? PowerPlatformApiPrefix;
 
     private readonly IOptions<AzureAISettings> _azureAISettings;
@@ -142,6 +147,38 @@ public partial class DataverseAIClient
                 throw new InvalidOperationException("Failed to get list of solutions.");
             return solutions.Values;
         });
+
+        _systemUsers = new Lazy<Task<IList<SystemUser>>>(async () =>
+        {
+            if (EnvironmentId == Guid.Empty)
+                throw new InvalidOperationException($"{nameof(EnvironmentId)} is not set.");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"systemusers"));
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+
+            var systemUsers = JsonSerializer.Deserialize<ODataContext<SystemUser>>(contentStream, _jsonSerializerOptions);
+            if (systemUsers == null)
+                throw new InvalidOperationException("Failed to get list system users.");
+            return systemUsers.Values;
+        });
+
+        _roles = new Lazy<Task<IList<Role>>>(async () =>
+        {
+            if (EnvironmentId == Guid.Empty)
+                throw new InvalidOperationException($"{nameof(EnvironmentId)} is not set.");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"roles?$expand=businessunitid"));
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+
+            var roles = JsonSerializer.Deserialize<ODataContext<Role>>(contentStream, _jsonSerializerOptions);
+            if (roles == null)
+                throw new InvalidOperationException("Failed to get list roles.");
+            return roles.Values;
+        });
     }
 
     public async Task LoadMetadata()
@@ -176,22 +213,22 @@ public partial class DataverseAIClient
             throw new InvalidOperationException("No metadata was returned.");
         _entityMetadataModels = metadata.Values;
 
-        _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"You are an assistant, helping '{FullName}' interact with Microsoft Power Platform."));
-        _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"You are assisting **{FullName}**"));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"You are an assistant, helping '{FullName}' interact with Microsoft Power Platform."));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"You are assisting **{FullName}**"));
 
         var listOfProperties = string.Join(", ", EntityMetadataModel.Properties.Values.ToBrowsableProperties());
-        _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Each Dataverse table or entity has following properties: {listOfProperties}"));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Each Dataverse table or entity has following properties: {listOfProperties}"));
 
         listOfProperties = string.Join(", ", Solution.Properties.Values.ToBrowsableProperties());
-        _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Each Dataverse solution has following properties: {listOfProperties}"));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Each Dataverse solution has following properties: {listOfProperties}"));
 
         listOfProperties = string.Join(", ", CanvasAppProperties.Properties.Values.ToBrowsableProperties());
-        _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Each canvas app has following properties: {listOfProperties}"));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Each canvas app has following properties: {listOfProperties}"));
 
-        _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Call a function if you need to get updated information"));
-        _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Each function can be called multiple times"));
-        _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"You can ask clarifying questions if function needs required parameter"));
-        _chatOptions.Messages.Add(new ChatMessage(ChatRole.System, $"Do not try to predict required parameter"));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Call a function if you need to get updated information"));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Each function can be called multiple times"));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"You can ask clarifying questions if function needs required parameter"));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Do not try to predict required parameter"));
     }
 
     #endregion
@@ -240,7 +277,7 @@ public partial class DataverseAIClient
 
     public async Task<string> GetChatCompletionAsync(string prompt)
     {
-        _chatOptions.Messages.Add(new ChatMessage(ChatRole.User, prompt));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.User, prompt));
         var response = await _openAIClient.Value.GetChatCompletionsAsync(OpenApiModelInternal, _chatOptions).ConfigureAwait(false);
         if (response == null || response.Value == null || response.Value.Choices == null || response.Value.Choices.Count <= 0)
             throw new ApplicationException("Unable to get Azure Open AI response");
@@ -252,7 +289,7 @@ public partial class DataverseAIClient
             {
                 var functionResponse = await aiFunction.Invoke(this, responseMessage.FunctionCall.Arguments).ConfigureAwait(false);
                 _chatOptions.Messages.Add(
-                    new ChatMessage(ChatRole.Function, functionResponse)
+                    new Azure.AI.OpenAI.ChatMessage(ChatRole.Function, functionResponse)
                     {
                         Name = responseMessage.FunctionCall.Name
                     }
@@ -261,7 +298,7 @@ public partial class DataverseAIClient
             else
             {
                 _chatOptions.Messages.Add(
-                    new ChatMessage(ChatRole.Function, $"Function '{responseMessage.FunctionCall.Name}' doesn't exist")
+                    new Azure.AI.OpenAI.ChatMessage(ChatRole.Function, $"Function '{responseMessage.FunctionCall.Name}' doesn't exist")
                     {
                         Name = responseMessage.FunctionCall.Name
                     }
@@ -273,7 +310,7 @@ public partial class DataverseAIClient
                 throw new ApplicationException("Unable to get Azure Open AI response");
             responseMessage = response.Value.Choices[0].Message;
         }
-        _chatOptions.Messages.Add(new ChatMessage(ChatRole.Assistant, response.Value.Choices[0].Message.Content));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.Assistant, response.Value.Choices[0].Message.Content));
 
         return response.Value.Choices[0].Message.Content;
     }
@@ -383,5 +420,46 @@ public partial class DataverseAIClient
 
         return solutionComponents;
     }
+
+    public async Task<Person?> FindPersonViaGraph(string personName)
+    {
+        if (string.IsNullOrWhiteSpace(personName))
+            throw new ArgumentNullException(nameof(personName));
+
+        personName = personName.Trim();
+
+        var people = await _graphClient.Value.Me.People.GetAsync().ConfigureAwait(false);
+        if (people == null || people.Value == null || people.Value.Count <= 0)
+            return null;
+
+        foreach (var person in people.Value)
+        {
+            if (string.Compare(person.DisplayName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
+                string.Compare(person.GivenName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
+                string.Compare(person.Surname, personName, StringComparison.OrdinalIgnoreCase) == 0)
+            {
+                return person;
+            }
+        }
+
+        return null;
+    }
+
+    public bool ConfirmAction(string action)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine();
+        Console.Write($"{action} [Yes]/No:");
+        Console.ResetColor();
+        var response = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(response))
+            return true;
+
+        response = response.Trim();
+
+        return response.Equals("Yes", StringComparison.OrdinalIgnoreCase) ||
+               response.Equals("Y", StringComparison.OrdinalIgnoreCase);
+    }
+
     #endregion
 }

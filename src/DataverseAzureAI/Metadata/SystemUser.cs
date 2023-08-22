@@ -1,5 +1,8 @@
+using System.Diagnostics;
+
 namespace AP2.DataverseAzureAI.Metadata;
 
+[DebuggerDisplay("{FullName}")]
 public class SystemUser
 {
     public string OwnerId { get; set; }
@@ -9,7 +12,7 @@ public class SystemUser
     public string address1_composite { get; set; }
     public string userpuid { get; set; }
     public int accessmode { get; set; }
-    public string internalemailaddress { get; set; }
+    public string? InternalEmailAddress { get; set; }
     public int azurestate { get; set; }
     public string address1_addressid { get; set; }
     public object middlename { get; set; }
@@ -108,7 +111,7 @@ public class SystemUser
     public bool defaultfilterspopulated { get; set; }
     public object timezoneruleversionnumber { get; set; }
     public string _defaultmailbox_value { get; set; }
-    public string systemuserid { get; set; }
+    public Guid SystemUserId { get; set; }
     public string windowsliveid { get; set; }
     public object overriddencreatedon { get; set; }
     public object address2_fax { get; set; }
