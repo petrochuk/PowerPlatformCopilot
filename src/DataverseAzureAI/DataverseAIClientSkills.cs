@@ -524,7 +524,12 @@ public partial class DataverseAIClient
         var role = roles.Result.FirstOrDefault(r => string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase) &&
                                              string.Equals(r.BusinessUnit.Name, businessUnit, StringComparison.OrdinalIgnoreCase));
         if (role == null)
-            return $"Unable to find role {roleName} in {EnvironmentInstance.FriendlyName}";
+        {
+            role = roles.Result.FirstOrDefault(r => r.Name.Contains(roleName, StringComparison.OrdinalIgnoreCase) &&
+                                                 string.Equals(r.BusinessUnit.Name, businessUnit, StringComparison.OrdinalIgnoreCase));
+            if (role == null)
+                return $"Unable to find role {roleName} in {EnvironmentInstance.FriendlyName}";
+        }
 
         if (!ConfirmAction($"Do you want to grant '{role.BusinessUnit.Name}/{role.Name}' role to {systemUser.FullName}?"))
             return UserDeclinedAction;
