@@ -11,8 +11,7 @@ It can be used as a starting point for building your own Copilot/AI Assistant fo
 ## Demos
 
 - [Assign roles](src/docs/assign-roles.md)
-- [Send an Email](src/docs/send-email.md)
-- [Find Dataverse Solution and send email to owner](src/docs/Demos.md#send-email)
+- [Find Dataverse Solution and send email to owner](src/docs/send-email.md)
 - [Translate Table Descriptions](src/docs/translate-table-descriptions.md)
 - [Ask questions about Table Properties](src/docs/table-properties.md)
 - [Ask questions about Canvas Apps](src/docs/canvas-app-properties.md)
