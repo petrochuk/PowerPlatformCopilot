@@ -506,21 +506,22 @@ public partial class DataverseAIClient
             return "Role name is required";
 
         // Send async requests in parallel
-        var systemUsers = await _systemUsers.Value.ConfigureAwait(false);
-        var person = await FindPersonViaGraph(personName).ConfigureAwait(false);
-        var roles = await _roles.Value.ConfigureAwait(false);
+        var systemUsers = _systemUsers.Value;
+        var person = FindPersonViaGraph(personName);
+        var roles = _roles.Value;
 
-        if (person == null)
+        await Task.WhenAll(systemUsers, person, roles);
+        if (person.Result == null)
             return $"Unable to find {personName}";
 
-        var systemUser = systemUsers.FirstOrDefault(s => string.Equals(s.InternalEmailAddress, person.UserPrincipalName, StringComparison.OrdinalIgnoreCase));
+        var systemUser = systemUsers.Result.FirstOrDefault(s => string.Equals(s.InternalEmailAddress, person.Result.UserPrincipalName, StringComparison.OrdinalIgnoreCase));
         if (systemUser == null)
             return $"Unable to find {personName} in {EnvironmentInstance.FriendlyName}";
 
         if (string.IsNullOrWhiteSpace(businessUnit))
             businessUnit = EnvironmentInstance.UrlName;
 
-        var role = roles.FirstOrDefault(r => string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase) &&
+        var role = roles.Result.FirstOrDefault(r => string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase) &&
                                              string.Equals(r.BusinessUnit.Name, businessUnit, StringComparison.OrdinalIgnoreCase));
         if (role == null)
             return $"Unable to find role {roleName} in {EnvironmentInstance.FriendlyName}";
