@@ -10,15 +10,16 @@ It can be used as a starting point for building your own Copilot/AI Assistant fo
 
 ## Demos
 
-[Watch Short Demos](src/docs/Demos.md)
-
+- [Assign roles](src/docs/assign-roles.md)
+- [Send an Email](src/docs/send-email.md)
 - [Find Dataverse Solution and send email to owner](src/docs/Demos.md#send-email)
-- [Translate Table Descriptions](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#translate-table-descriptions)
-- [Ask questions about Table Properties](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#table-properties)
-- [Ask questions about Canvas Apps](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#canvas-app-properties)
-- [Save Canvas Apps as msapp file to local folder](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#save-msapp-file)
-- [List available solutions and whats inside them](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#solution-components)
-- [Assign roles](https://github.com/petrochuk/PowerPlatformCopilot/blob/main/src/docs/Demos.md#assign-roles)
+- [Translate Table Descriptions](src/docs/translate-table-descriptions.md)
+- [Ask questions about Table Properties](src/docs/table-properties.md)
+- [Ask questions about Canvas Apps](src/docs/canvas-app-properties.md)
+- [Save Canvas Apps as msapp file to local folder](src/docs/save-msapp-file.md)
+- [List available solutions and whats inside them](src/docs/solution-components.md)
+
+[Watch All Short Demos](src/docs/Demos.md)
 
 ## Contributing
 
