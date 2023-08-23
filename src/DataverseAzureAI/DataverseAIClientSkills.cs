@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using AP2.DataverseAzureAI.Extensions;
 using AP2.DataverseAzureAI.Globalization;
 using AP2.DataverseAzureAI.Metadata;
@@ -161,9 +163,9 @@ public partial class DataverseAIClient
         }
     }
 
-    [Description("Returns filtered list of canvas apps based on specified property value")]
+    [Description("Returns all or filtered list of canvas apps based on specified property value")]
     public async Task<string> ListOfCanvasAppsByPropertyValue(
-        [Description("Property name or empty to return all canvas PowerApps")]
+        [Description("Property name or empty to return all canvas PowerApps user has access to")]
         string propertyName,
         [Description("Property value")]
         string propertyValueFilter,
@@ -540,6 +542,73 @@ public partial class DataverseAIClient
         response.EnsureSuccessStatusCode();
 
         return $"Granted '{role.BusinessUnit.Name}/{role.Name}' role to {systemUser.FullName}";
+    }
+
+    #endregion
+
+    #region Share
+
+    [Description("Share canvas app inside Power Platform")]
+    public async Task<string> ShareCanvasApp(
+        [Required, Description("App name or list of comma separated names")]
+        string appNames,
+        [Required, Description("Person's first name, last name or a email to share with")]
+        string personName)
+    {
+        if (string.IsNullOrWhiteSpace(appNames))
+            return "App name(s) is required";
+        if (string.IsNullOrWhiteSpace(personName))
+            return "Person name is required";
+
+        // Send async requests in parallel
+        var person = FindPersonViaGraph(personName);
+        var canvasApps = _canvasApps.Value;
+
+        await Task.WhenAll(person, canvasApps);
+        if (person.Result == null)
+            return $"Unable to find {personName}";
+
+        // First, exact match by name
+        var canvasAppsToShare = canvasApps.Result.Where(c => string.Equals(c.Properties.DisplayName, appNames, StringComparison.OrdinalIgnoreCase));
+        if (canvasAppsToShare == null || !canvasAppsToShare.Any())
+        {
+            var appNamesList = appNames.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            canvasAppsToShare = canvasApps.Result.Where(c => appNamesList.Any(a => string.Equals(c.Properties.DisplayName, a.Trim(), StringComparison.OrdinalIgnoreCase)));
+            if (canvasAppsToShare == null || !canvasAppsToShare.Any())
+                return $"Unable to find {appNames} in {EnvironmentInstance.FriendlyName}";
+        }
+
+        var appNamesToShare = string.Join(", ", canvasAppsToShare.Select(c => c.Properties.DisplayName));
+        if (!ConfirmAction($"Do you want to share '{appNamesToShare}' with {person.Result.DisplayName}?"))
+            return UserDeclinedAction;
+
+        var updatePermissionRequest = new UpdatePermissionRequest();
+        updatePermissionRequest.Put.Add(new CanvasPermission()
+        {
+            Properties = new PermissionProperty()
+            {
+                RoleName = "CanView",
+                NotifyShareTargetOption = "DoNotNotify",
+                Principal = new Principal()
+                {
+                    Email = person.Result.UserPrincipalName!,
+                    Id = person.Result.Id!,
+                    Type = "User"
+                }
+            }
+        });
+
+        foreach (var canvasApp in canvasAppsToShare)
+        {
+            Console.WriteLine($"Sharing '{canvasApp.Properties.DisplayName}' with {person.Result.DisplayName}");
+            var requestBody = JsonSerializer.Serialize(updatePermissionRequest, _jsonSerializerOptions);
+            using var request = new HttpRequestMessage(HttpMethod.Post, BuildApiQueryUri($"powerapps/apps/{canvasApp.Name}/modifyPermissions?%24filter=environment+eq+%27{EnvironmentInstance.EnvironmentId}%27&api-version=1"));
+            request.Content = new StringContent(JsonSerializer.Serialize(updatePermissionRequest, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+        }
+
+        return FunctionCompletedSuccessfully;
     }
 
     #endregion

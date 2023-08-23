@@ -30,6 +30,7 @@ public partial class DataverseAIClient
     const string First = "First";
     const string Last = "Last";
     const string UserDeclinedAction = "User declined to perform the action";
+    const string FunctionCompletedSuccessfully = "Function completed successfully";
 
     #endregion
 
@@ -37,6 +38,7 @@ public partial class DataverseAIClient
 
     private readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
         PropertyNameCaseInsensitive = true
     };
     private Lazy<OpenAIClient> _openAIClient;
@@ -385,7 +387,7 @@ public partial class DataverseAIClient
         return new Uri(EnvironmentInstance!.ApiUrl, $"api/data/v9.2/{query}");
     }
 
-    [DebuggerStepThrough]
+    //[DebuggerStepThrough]
     private Uri BuildApiQueryUri(string query)
     {
         var baseUri = new Uri($"https://{PowerPlatformApiPrefix}.environment.api.powerplatform.com");

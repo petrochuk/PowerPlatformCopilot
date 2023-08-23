@@ -85,7 +85,7 @@ public class CanvasAppProperties
     public string appPlayTeamsUri { get; set; }
     public object[] authorizationReferences { get; set; }
     public Databasereferences databaseReferences { get; set; }
-    public Permission[] permissions { get; set; }
+    public CanvasPermission[] Permissions { get; set; }
     public Userappmetadata UserAppMetadata { get; set; }
     public bool isFeaturedApp { get; set; }
     public bool bypassConsent { get; set; }
@@ -289,28 +289,51 @@ public class Appdocumentcomplexity
     public bool startScreenUsed { get; set; }
 }
 
-public class Permission
+public class CanvasPermission
 {
-    public string name { get; set; }
-    public string id { get; set; }
-    public string type { get; set; }
-    public Properties1 properties { get; set; }
+    public string Name { get; set; }
+    public string Id { get; set; }
+    public string Type { get; set; }
+    [JsonPropertyName("properties")]
+    public PermissionProperty Properties { get; set; }
 }
 
-public class Properties1
+public class PermissionProperty
 {
-    public string roleName { get; set; }
-    public Principal principal { get; set; }
-    public string scope { get; set; }
-    public string notifyShareTargetOption { get; set; }
-    public bool inviteGuestToTenant { get; set; }
-    public DateTime createdOn { get; set; }
-    public string createdBy { get; set; }
+    [JsonPropertyName("roleName")]
+    public string RoleName { get; set; }
+
+    [JsonPropertyName("principal")]
+    public Principal Principal { get; set; }
+
+    [JsonPropertyName("scope")]
+    public string Scope { get; set; }
+
+    [JsonPropertyName("notifyShareTargetOption")]
+    public string NotifyShareTargetOption { get; set; }
+
+    [JsonPropertyName("inviteGuestToTenant")]
+    public bool? InviteGuestToTenant { get; set; }
+
+    [JsonPropertyName("createdOn")]
+    public DateTime? CreatedOn { get; set; }
+
+    [JsonPropertyName("createdBy")]
+    public string CreatedBy { get; set; }
 }
 
 public class Principal
 {
-    public string id { get; set; }
-    public string type { get; set; }
+    [JsonPropertyName("email")]
+    public string Email { get; set; }
+
+    [JsonPropertyName("id")]
+    public string Id { get; set; }
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; }
+
+    [JsonPropertyName("tenantId")]
+    public object? TenantId { get; set; }
 }
 

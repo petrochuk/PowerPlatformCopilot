@@ -43,6 +43,8 @@ The following skills are implemented as Azure AI Functions in [DataverseAIClient
 | SendEmailOrShareLinkWithSomeone | Sends an email or shares a link to an item, record or anything else inside PowerPlatform including but not limited to app, solution, table, component |
 | SaveToFileSystem | Save to file system: text output, apps, solutions, lists or any other Power Platform component |
 | CreateItemInsidePowerPlatform | Creates new items, records or anything else inside PowerPlatform including but not limited to apps, solutions, tables, users, components |
+| UpdateUserPermission | Updates user permission inside Power Platform |
+| ShareCanvasApp | Share canvas app inside Power Platform |
 
 ## Running the project
 
