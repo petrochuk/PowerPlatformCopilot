@@ -22,7 +22,7 @@ It can be used as a starting point for building your own Copilot/AI Assistant fo
 
 ## Contributing
 
-This project is welcoming contributions. If you have any questions, feel free to start a [discussion](https://github.com/petrochuk/PowerPlatformCopilot/discussions).
+This project is welcoming contributions. If you have any questions, feel free to start a [discussion](https://github.com/petrochuk/PowerPlatformCopilot/discussions). I can even give temporary OpenApiKey for testing to people who contribute.
 
 ## Copilot/AI Assistant Skills implemented as AI Functons
 
