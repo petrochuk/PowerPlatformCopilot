@@ -1,4 +1,6 @@
 # Save msapp file
 
-Dataverse AI downloads canvas app as msapp file and saves it local folder (click play):
+Dataverse AI downloads canvas app as msapp file and saves it local folder.
+
+Click Play:
 ![Send Email](assets/images/SaveMsapp.gif)
