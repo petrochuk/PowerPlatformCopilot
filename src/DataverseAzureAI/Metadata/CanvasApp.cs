@@ -201,12 +201,6 @@ public class Userappmetadata
     public bool includeInAppsList { get; set; }
 }
 
-public class Environment
-{
-    public string id { get; set; }
-    public string name { get; set; }
-}
-
 public class Apppackagedetails
 {
     public Playerpackage playerPackage { get; set; }

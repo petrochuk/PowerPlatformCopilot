@@ -15,7 +15,7 @@ public static class DataverseAIClientExtensions
 
         services.AddTransient<DataverseAIClient>();
         services.AddTransient<WamAuthorizationHeaderHandler>();
-        services.AddHttpClient<DataverseAIClient>(c =>
+        services.AddHttpClient(nameof(DataverseAIClient), c =>
         {
             c.DefaultRequestVersion = HttpVersion.Version30;
         })
