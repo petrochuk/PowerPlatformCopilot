@@ -5,6 +5,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ApplicationIcon>playlist_list_64px.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -14,6 +15,10 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <NoWarn>1701;1702;CA1812</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="playlist_list_64px.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DataverseAzureAI\DataverseAzureAI.csproj" />
