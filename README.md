@@ -18,6 +18,7 @@ It can be used as a starting point for building your own Copilot/AI Assistant fo
 - [Save Canvas Apps as msapp file to local folder](src/docs/save-msapp-file.md)
 - [List available solutions and whats inside them](src/docs/solution-components.md)
 - [Share canvas apps](src/docs/share-canvas-apps.md)
+- [Switching between Environments](src/docs/switching-environments.md)
 
 [Watch All Short Demos](src/docs/Demos.md)
 
