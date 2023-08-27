@@ -15,18 +15,31 @@ public class Solution
 
     public DateTime InstalledOn { get; set; }
     public string SolutionPackageVersion { get; set; }
+
+    [Browsable(false)]
     public string _configurationpageid_value { get; set; }
+
     public Guid SolutionId { get; set; }
     public string UniqueName { get; set; }
     public bool IsApiManaged { get; set; }
+
+    [Browsable(false)]
     public string _publisherid_value { get; set; }
+
+    [JsonPropertyName("publisherid")]
+    public Publisher Publisher { get; set; }
+
     public bool IsManaged { get; set; }
     public bool IsVisible { get; set; }
     public object thumbprint { get; set; }
     public object pinpointpublisherid { get; set; }
     public string Version { get; set; }
+
+    [Browsable(false)]
     public object _modifiedonbehalfby_value { get; set; }
+    [Browsable(false)]
     public string _parentsolutionid_value { get; set; }
+
     public object pinpointassetid { get; set; }
     public object pinpointsolutionid { get; set; }
     public string FriendlyName { get; set; }
@@ -34,6 +47,8 @@ public class Solution
     public int VersionNumber { get; set; }
     public object templatesuffix { get; set; }
     public string upgradeinfo { get; set; }
+
+    [Browsable(false)]
     public object _createdonbehalfby_value { get; set; }
 
     public DateTime? UpdatedOn { get; set; }

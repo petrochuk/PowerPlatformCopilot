@@ -39,3 +39,8 @@ It has never been easier to assign roles in Power Platform with the help of Copi
 
 Copilot makes it easy to share your canvas apps with other users. You can share your canvas app with your colleagues just by entering their first name. It also makes it possible to share multiple canvas apps at the same time.
 ![Send Email](assets/images/ShareCanvasApps.gif)
+
+## Interact with Power Platform Environments
+
+Copilot makes it easier and faster to switch between environments in Power Platform and apply same filters across different environments. In example below, I have two environments, one DevTools and the other one is ProDov. I ask to list environments published by Microsoft but then I ask to execute same query in ProDov environment. Copilot will automatically switch to ProDov environment and execute the query.
+![SwitchingEnvironments](assets/images/SwitchingEnvironments.gif)

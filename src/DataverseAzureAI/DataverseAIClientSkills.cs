@@ -279,7 +279,11 @@ public partial class DataverseAIClient
 
         var solutions = await SelectedEnvironment!.Solutions.Value.ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(propertyName))
+        {
+            if (!string.IsNullOrWhiteSpace(propertyValueFilter))
+                return "Property name is required when filtering by property value";
             return "List of all solutions: " + string.Join(", ", solutions.Select(s => s.FriendlyName));
+        }
 
         if (!Solution.Properties.TryGetValue(propertyName, out var propertyInfo))
             return PropertyNotFound;
@@ -310,9 +314,9 @@ public partial class DataverseAIClient
         }
 
         if (result.Count == 0)
-            return $"Not found any solutions matching '{propertyName} = {propertyValueFilter}' filter";
+            return $"Not found any solutions with {propertyName} equals {propertyValueFilter} filter";
 
-        return $"Solution(s) matching: {string.Join(", ", result)}";
+        return $"Solution(s) with {propertyName} equals {propertyValueFilter}: {string.Join(", ", result)}";
     }
 
     [Description("Returns list of components inside Dataverse solutions. It can filter on component type, name or other properties")]

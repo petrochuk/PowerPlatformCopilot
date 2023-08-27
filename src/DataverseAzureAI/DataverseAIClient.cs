@@ -176,10 +176,29 @@ public partial class DataverseAIClient : IDisposable
     /// </summary>
     public void Run()
     {
+        // First start asyncronous tasks
         _organization = Task.Run(GetOrganization);
         _user = Task.Run(GetMe);
         _environments = Task.Run(GetEnvironments);
         Task.Run(() => WelcomeMessage.NextWelcomeMessage(_liteDatabase, _openAIClient.Value, OpenApiModelInternal));
+
+        // Initial prompt
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, MainSystemPrompt));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"You are assisting **{_userSettings.DisplayName}**"));
+
+        var listOfProperties = string.Join(", ", EntityMetadataModel.Properties.Values.ToBrowsableProperties());
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Each Dataverse table or entity has following properties: {listOfProperties}"));
+
+        listOfProperties = string.Join(", ", Solution.Properties.Values.ToBrowsableProperties());
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Each Dataverse solution has following properties: {listOfProperties}"));
+
+        listOfProperties = string.Join(", ", CanvasAppProperties.Properties.Values.ToBrowsableProperties());
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Each canvas app has following properties: {listOfProperties}"));
+
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Call a function if you need to get updated information"));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Each function can be called multiple times"));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"You can ask clarifying questions if function needs required parameter"));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"Do not try to predict required parameter"));
     }
 
     private async Task<IList<Metadata.Environment>> GetEnvironments()

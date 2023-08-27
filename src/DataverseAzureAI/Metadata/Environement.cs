@@ -47,7 +47,7 @@ public class Environment
     {
         Solutions = new Lazy<Task<IList<Solution>>>(async () =>
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"solutions?$expand=createdby,modifiedby&$filter=isvisible eq true"));
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"solutions?$expand=createdby,modifiedby,publisherid&$filter=isvisible eq true"));
             var httpClient = HttpClientFactory!.CreateClient(nameof(DataverseAIClient));
             var response = await httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
