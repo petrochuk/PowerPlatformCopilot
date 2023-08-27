@@ -83,12 +83,17 @@ public partial class DataverseAIClient
 
     [Description("Returns filtered list of Model-driven PowerApps based on specified property value")]
     public async Task<string> ListOfModelDrivenAppsByPropertyValue(
+        [Description("Power Platform environement")]
+        string environement,
         [Description("Property name or empty to return all Model-driven PowerApps")]
         string propertyName,
         [Description("Filter by property value")]
         string propertyValueFilter)
     {
-        var appModules = await _appModules.Value.ConfigureAwait(false);
+        if (!EnsureSelectedEnvironment(environement, out var errorResponse))
+            return errorResponse;
+
+        var appModules = await SelectedEnvironment!.AppModules.Value.ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(propertyName))
         {
             return "List of Model-driven apps: " + string.Join(", ", appModules.Select(x => x.Name));
@@ -114,12 +119,17 @@ public partial class DataverseAIClient
 
     [Description("Finds a canvas app based on specified property value")]
     public async Task<string> FindCanvasApp(
+        [Description("Power Platform environement")]
+        string environement,
         [Required, Description("Property name")]
         string propertyName,
         [Required, Description("Property value")]
         string propertyValue)
     {
-        var canvasApps = await _canvasApps.Value.ConfigureAwait(false);
+        if (!EnsureSelectedEnvironment(environement, out var errorResponse))
+            return errorResponse;
+
+        var canvasApps = await SelectedEnvironment.CanvasApps.Value.ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(propertyName))
         {
             return "List of canvas apps: " + string.Join(", ", canvasApps.Select(x => x.Properties.DisplayName));
@@ -165,6 +175,8 @@ public partial class DataverseAIClient
 
     [Description("Returns all or filtered list of canvas apps based on specified property value")]
     public async Task<string> ListOfCanvasAppsByPropertyValue(
+        [Description("Power Platform environement")]
+        string environement,
         [Description("Property name or empty to return all canvas PowerApps user has access to")]
         string propertyName,
         [Description("Property value")]
@@ -172,7 +184,10 @@ public partial class DataverseAIClient
         [Description("Optional limit like last, first, top 10, bottom 3")]
         string sortOrder)
     {
-        var canvasApps = await _canvasApps.Value.ConfigureAwait(false);
+        if (!EnsureSelectedEnvironment(environement, out var errorResponse))
+            return errorResponse;
+
+        var canvasApps = await SelectedEnvironment.CanvasApps.Value.ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(propertyName))
         {
             return "List of canvas apps: " + string.Join(", ", canvasApps.Select(x => x.Properties.DisplayName));
@@ -218,18 +233,23 @@ public partial class DataverseAIClient
 
     [Description($"Returns property value for a canvas app")]
     public async Task<string> GetCanvasAppPropertyValue(
+        [Description("Power Platform environement")]
+        string environement,
         [Description("Canvas app name")]
         string canvasAppName,
         [Description("Property name")]
         string propertyName)
     {
+        if (!EnsureSelectedEnvironment(environement, out var errorResponse))
+            return errorResponse;
+
         if (string.IsNullOrWhiteSpace(canvasAppName))
-            return "Canvas app name is required";
+            return "Canvas app name is required. Ask for name";
 
         if (string.IsNullOrWhiteSpace(propertyName) || !CanvasAppProperties.Properties.TryGetValue(propertyName, out var propertyInfo))
             return PropertyNotFound;
 
-        var canvasApps = await _canvasApps.Value.ConfigureAwait(false);
+        var canvasApps = await SelectedEnvironment!.CanvasApps.Value.ConfigureAwait(false);
         foreach (var canvasApp in canvasApps)
         {
             if (string.Equals(canvasAppName, canvasApp.Properties.DisplayName, StringComparison.OrdinalIgnoreCase))
@@ -243,8 +263,10 @@ public partial class DataverseAIClient
 
     #region Assistant skill functions for Dataverse Solutions
 
-    [Description("Returns filtered list of solutions installed/imported based on specified property value and optional user")]
+    [Description("Returns all solutions or filtered list of installed/imported based on specified property value and optional user")]
     public async Task<string> ListOSolutionsByPropertyValue(
+        [Description("Power Platform environement")]
+        string environement,
         [Description("Property name or empty to return all Dataverse solutions")]
         string propertyName,
         [Description("Filter by property value")]
@@ -252,7 +274,10 @@ public partial class DataverseAIClient
         [Description("Optional personal pronoun such as 'I', 'me', co-worker's first, last name, or full name for filters in addition to CreatedOn, ModifiedOn")]
         string userFirstLastOrPronoun)
     {
-        var solutions = await _solutions.Value.ConfigureAwait(false);
+        if (!EnsureSelectedEnvironment(environement, out var response))
+            return response;
+
+        var solutions = await SelectedEnvironment!.Solutions.Value.ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(propertyName))
             return "List of all solutions: " + string.Join(", ", solutions.Select(s => s.FriendlyName));
 
@@ -292,6 +317,8 @@ public partial class DataverseAIClient
 
     [Description("Returns list of components inside Dataverse solutions. It can filter on component type, name or other properties")]
     public async Task<string> ListOSolutionComponents(
+        [Description("Power Platform environement")]
+        string environement,
         [Required, Description("Dataverse solution friendly, or unique name, or solution id")]
         string solutionName,
         [Description("Component type or empty to return all components")]
@@ -301,7 +328,10 @@ public partial class DataverseAIClient
         [Description("Optional personal pronoun such as 'I', 'me', co-worker's first, last name, or full name for filters in addition to CreatedOn, ModifiedOn")]
         string userFirstLastOrPronoun)
     {
-        var solutions = await _solutions.Value.ConfigureAwait(false);
+        if (!EnsureSelectedEnvironment(environement, out var errorResponse))
+            return errorResponse;
+
+        var solutions = await SelectedEnvironment!.Solutions.Value.ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(solutionName))
             return "Solution name is required";
 
@@ -325,11 +355,15 @@ public partial class DataverseAIClient
 
     [Description("Returns property value for specified Dataverse solution")]
     public async Task<string> GetSolutionPropertyValue(
+        [Description("Power Platform environement")]
+        string environement,
         [Description("Dataverse solution friendly, unique name or id")]
         string solutionName,
         [Description("Property name")]
         string propertyName)
     {
+        if (!EnsureSelectedEnvironment(environement, out var errorResponse))
+            return errorResponse;
         if (string.IsNullOrWhiteSpace(solutionName))
             return "Solution name is required";
         if (string.IsNullOrWhiteSpace(propertyName) || !Solution.Properties.TryGetValue(propertyName, out var propertyInfo))
@@ -339,7 +373,7 @@ public partial class DataverseAIClient
 
         solutionName = solutionName.Trim();
 
-        var solutions = await _solutions.Value.ConfigureAwait(false);
+        var solutions = await SelectedEnvironment!.Solutions.Value.ConfigureAwait(false);
         foreach (var solution in solutions)
         {
             if (string.Compare(solution.FriendlyName, solutionName, StringComparison.OrdinalIgnoreCase) == 0 ||
@@ -406,6 +440,8 @@ public partial class DataverseAIClient
 
     [Description("Save to file system: text output, apps, solutions, lists or any other Power Platform component")]
     public async Task<string> SaveToFileSystem(
+        [Description("Power Platform environement")]
+        string environement,
         [Required, Description("Type of an item to save")]
         string itemType,
         [Required, Description("Name for an item")]
@@ -443,7 +479,10 @@ public partial class DataverseAIClient
             if (string.IsNullOrWhiteSpace(filePath))
                 return $"Directory '{saveLocation}' doesn't exist. You need to ask user for different directory name";
 
-            var canvasApps = await _canvasApps.Value.ConfigureAwait(false);
+            if (!EnsureSelectedEnvironment(environement, out var errorResponse))
+                return errorResponse;
+
+            var canvasApps = await SelectedEnvironment!.CanvasApps.Value.ConfigureAwait(false);
             foreach (var canvasApp in canvasApps)
             {
                 if (string.Equals(itemName, canvasApp.Properties.DisplayName, StringComparison.OrdinalIgnoreCase))
@@ -459,7 +498,8 @@ public partial class DataverseAIClient
                         response.Equals("Y", StringComparison.OrdinalIgnoreCase))
                     {
                         // Download the app to file
-                        var responseStream = await _httpClient.GetStreamAsync(canvasApp.Properties.AppUris.documentUri.value);
+                        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+                        var responseStream = await httpClient.GetStreamAsync(canvasApp.Properties.AppUris.documentUri.value);
                         using var fileStream = new FileStream(filePath, FileMode.Create);
                         responseStream.CopyTo(fileStream);
                         Console.WriteLine($"Done");
@@ -492,6 +532,8 @@ public partial class DataverseAIClient
 
     [Description("Updates user permission inside Power Platform")]
     public async Task<string> UpdateUserPermission(
+        [Description("Power Platform environement")]
+        string environement,
         [Required, Description("Grant or Revoke permission")]
         string changeType,
         [Required, Description("Person's first name, last name or a email to send email to or share link with")]
@@ -501,16 +543,19 @@ public partial class DataverseAIClient
         [Description("Optional business unit role belongs to")]
         string businessUnit)
     {
+        if (!EnsureSelectedEnvironment(environement, out var errorResponse))
+            return errorResponse;
+
         if (string.IsNullOrWhiteSpace(changeType))
-            return "Change type is required";
+            return "Change type is required. Ask for Grant or Revoke";
 
         if (string.IsNullOrWhiteSpace(roleName))
-            return "Role name is required";
+            return "Role name is required. Ask for role name.";
 
         // Send async requests in parallel
-        var systemUsers = _systemUsers.Value;
+        var systemUsers = SelectedEnvironment!.SystemUsers.Value;
         var person = FindPersonViaGraph(personName);
-        var roles = _roles.Value;
+        var roles = SelectedEnvironment.Roles.Value;
 
         await Task.WhenAll(systemUsers, person, roles);
         if (person.Result == null)
@@ -538,7 +583,8 @@ public partial class DataverseAIClient
 
         using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgQueryUri($"systemusers({systemUser.SystemUserId})/systemuserroles_association/$ref"));
         request.Content = new StringContent($"{{\"@odata.id\":\"{BuildOrgQueryUri($"roles({role.RoleId})")}\"}}", Encoding.UTF8, "application/json");
-        var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+        var response = await httpClient.SendAsync(request).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         return $"Granted '{role.BusinessUnit.Name}/{role.Name}' role to {systemUser.FullName}";
@@ -550,6 +596,8 @@ public partial class DataverseAIClient
 
     [Description("Share canvas app inside Power Platform")]
     public async Task<string> ShareCanvasApp(
+        [Description("Power Platform environement")]
+        string environement,
         [Required, Description("App name or list of comma separated names")]
         string appNames,
         [Required, Description("Person's first name, last name or a email to share with")]
@@ -559,10 +607,12 @@ public partial class DataverseAIClient
             return "App name(s) is required";
         if (string.IsNullOrWhiteSpace(personName))
             return "Person name is required";
+        if (!EnsureSelectedEnvironment(environement, out var errorResponse))
+            return errorResponse;
 
         // Send async requests in parallel
         var person = FindPersonViaGraph(personName);
-        var canvasApps = _canvasApps.Value;
+        var canvasApps = SelectedEnvironment!.CanvasApps.Value;
 
         await Task.WhenAll(person, canvasApps);
         if (person.Result == null)
@@ -601,10 +651,11 @@ public partial class DataverseAIClient
         foreach (var canvasApp in canvasAppsToShare)
         {
             Console.WriteLine($"Sharing '{canvasApp.Properties.DisplayName}' with {person.Result.DisplayName}");
-            var requestBody = JsonSerializer.Serialize(updatePermissionRequest, _jsonSerializerOptions);
-            using var request = new HttpRequestMessage(HttpMethod.Post, BuildApiQueryUri($"powerapps/apps/{canvasApp.Name}/modifyPermissions?%24filter=environment+eq+%27{EnvironmentInstance.EnvironmentId}%27&api-version=1"));
-            request.Content = new StringContent(JsonSerializer.Serialize(updatePermissionRequest, _jsonSerializerOptions), Encoding.UTF8, "application/json");
-            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+            var requestBody = JsonSerializer.Serialize(updatePermissionRequest, JsonSerializerOptions);
+            using var request = new HttpRequestMessage(HttpMethod.Post, BuildEnvironmentApiQueryUri($"powerapps/apps/{canvasApp.Name}/modifyPermissions?%24filter=environment+eq+%27{EnvironmentInstance.EnvironmentId}%27&api-version=1"));
+            request.Content = new StringContent(JsonSerializer.Serialize(updatePermissionRequest, JsonSerializerOptions), Encoding.UTF8, "application/json");
+            var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+            var response = await httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
 

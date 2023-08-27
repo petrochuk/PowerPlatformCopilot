@@ -1,10 +1,9 @@
-using System.Reflection;
+using AP2.DataverseAzureAI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using AP2.DataverseAzureAI;
+using System.Reflection;
 
 namespace ConsoleTestApp;
 
@@ -17,13 +16,10 @@ internal class Program
 
     private async Task Run(string[] args)
     {
-        var testAppSettings = _host!.Services.GetRequiredService<IOptions<TestAppSettings>>();
-        var client = _host!.Services.GetRequiredService<DataverseAIClient>();
+        using var client = _host!.Services.GetRequiredService<DataverseAIClient>();
 
-        WriteLine(ConsoleColor.DarkGray, "Connecting to the environment");
-        client.EnvironmentId = testAppSettings.Value.EnvironmentId;
-        await client.LoadMetadata().ConfigureAwait(false);
-        WriteLine(ConsoleColor.DarkGray, $"Connected to {client.EnvironmentInstance.FriendlyName}");
+        WriteLine(ConsoleColor.Magenta, client.WelcomeMessage);
+        client.Run();
         Console.WriteLine();
 
         var prompt = GetPrompt(args, client);
@@ -36,8 +32,7 @@ internal class Program
             WriteLine(ConsoleColor.Cyan, chatCompletion);
 
             Console.WriteLine();
-            WriteLine(ConsoleColor.Gray, $"{(client.GivenName != null ? client.GivenName : "User")}:");
-            prompt = Console.ReadLine();
+            prompt = GetPrompt(args, client);
         }
     }
 
@@ -46,20 +41,15 @@ internal class Program
         WriteLine(ConsoleColor.Gray, $"{(client.GivenName != null ? client.GivenName : "User")}:");
 
         // Get prompt from command line or arguments
-        string? prompt;
+        string prompt;
         if (args.Length <= 0)
         {
-            prompt = Console.ReadLine();
+            prompt = Console.ReadLine() ?? string.Empty;
         }
         else
         {
             prompt = args[0];
             Console.WriteLine($"{prompt}");
-        }
-
-        if (string.IsNullOrWhiteSpace(prompt))
-        {
-            throw new ArgumentException("Prompt is empty.");
         }
 
         return prompt;
@@ -114,9 +104,22 @@ internal class Program
 
     private static IConfiguration LoadConfiguration()
     {
+        var userAppSettings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), DataverseAIClient.LocalAppDataFolderName, "appSettings.json");
+        if (!File.Exists(userAppSettings))
+        {
+            if (!Directory.Exists(Path.GetDirectoryName(userAppSettings)))
+                Directory.CreateDirectory(Path.GetDirectoryName(userAppSettings)!);
+
+            var httpClient = new HttpClient();
+            var responseStream = httpClient.GetStreamAsync("https://ap2public.blob.core.windows.net/oaipublic/appSettings.json").Result;
+            using var fileStream = new FileStream(userAppSettings, FileMode.Create);
+            responseStream.CopyTo(fileStream);
+        }
+
         var builder = new ConfigurationBuilder()
             .SetBasePath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!)
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile(userAppSettings, optional: true, reloadOnChange: true);
 
 #if DEBUG
         builder.AddJsonFile("appsettings.Debug.json", optional: true, reloadOnChange: true);

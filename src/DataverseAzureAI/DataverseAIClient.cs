@@ -1,6 +1,7 @@
 #region using
 using AP2.DataverseAzureAI.Extensions;
 using AP2.DataverseAzureAI.Metadata;
+using AP2.DataverseAzureAI.Model;
 using AP2.DataverseAzureAI.OData;
 using AP2.DataverseAzureAI.Settings;
 using Azure;
@@ -8,10 +9,10 @@ using Azure.AI.OpenAI;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
-using Microsoft.Graph.Models.Security;
 using Microsoft.Kiota.Abstractions.Authentication;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http;
 using System.Text.Json;
 #endregion
 
@@ -20,9 +21,12 @@ namespace AP2.DataverseAzureAI;
 /// <summary>
 /// https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/function-calling
 /// </summary>
-public partial class DataverseAIClient
+public partial class DataverseAIClient : IDisposable
 {
     #region Constants
+
+    public const string LocalAppDataFolderName = "PowerPlatformAI";
+    public const string MainSystemPrompt = "You are an assistant, helping interact with Microsoft Power Platform.";
 
     const string TableNotFound = "Table not found";
     const string PropertyNotFound = "Property not found";
@@ -36,7 +40,7 @@ public partial class DataverseAIClient
 
     #region Fields
 
-    private readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    public static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
         PropertyNameCaseInsensitive = true
@@ -44,16 +48,18 @@ public partial class DataverseAIClient
     private Lazy<OpenAIClient> _openAIClient;
     private Lazy<GraphServiceClient> _graphClient;
     TimeProvider _timeProvider;
+    private LiteDB.LiteDatabase _liteDatabase;
+    Task<User>? _user;
+    Task<Organization>? _organization;
+    Task<IList<Metadata.Environment>> _environments;
+    Metadata.Environment? _selectedEnvironment;
+    Settings.UserSettings _userSettings;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    private readonly HttpClient _httpClient;
     private IList<EntityMetadataModel>? _entityMetadataModels;
-    private readonly Lazy<Task<IList<AppModule>>> _appModules;
-    private readonly Lazy<Task<IList<CanvasApp>>> _canvasApps;
-    private readonly Lazy<Task<IList<Solution>>> _solutions;
-    private readonly Lazy<Task<IList<SystemUser>>> _systemUsers;
-    private readonly Lazy<Task<IList<Role>>> _roles;
-    private string? PowerPlatformApiPrefix;
-
+    private string? PowerPlatformTenantApiPrefix;
+    private string? PowerPlatformEnvironmentApiPrefix;
+    private bool disposedValue;
     private readonly IOptions<AzureAISettings> _azureAISettings;
     private readonly AIFunctionCollection _aIFunctionsCollection = new(typeof(DataverseAIClient));
     private readonly ChatCompletionsOptions _chatOptions = new ()
@@ -69,10 +75,18 @@ public partial class DataverseAIClient
 
     #region Constructors & Initialization
 
-    public DataverseAIClient(HttpClient httpClient, IOptions<AzureAISettings> azureAISettings, 
+    public DataverseAIClient(
+        IHttpClientFactory httpClientFactory, 
+        IOptions<AzureAISettings> azureAISettings, 
         IAuthenticationProvider authenticationProvider, TimeProvider timeProvider)
     {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        _userSettings = Settings.UserSettings.Load(AppDataFolderName);
+        _liteDatabase = new LiteDB.LiteDatabase(Path.Combine(AppDataFolderName, $"{nameof(DataverseAIClient)}.db"));
+        var lastWelcomeMessage = _liteDatabase.GetCollection<WelcomeMessage>().FindOne(LiteDB.Query.All(LiteDB.Query.Descending));
+        if (lastWelcomeMessage != null)
+            WelcomeMessage = lastWelcomeMessage;
+
         _azureAISettings = azureAISettings;
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
 
@@ -101,86 +115,6 @@ public partial class DataverseAIClient
         foreach (var functionDefinition in _aIFunctionsCollection.Definitions)
             _chatOptions.Functions.Add(functionDefinition);
         _chatOptions.FunctionCall = FunctionDefinition.Auto;
-
-        _appModules = new Lazy<Task<IList<AppModule>>>(async () =>
-        {
-            if (EnvironmentId == Guid.Empty)
-                throw new InvalidOperationException($"{nameof(EnvironmentId)} is not set.");
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"appmodules/Microsoft.Dynamics.CRM.RetrieveUnpublishedMultiple()"));
-            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-
-            var appModules = JsonSerializer.Deserialize<ODataContext<AppModule>>(contentStream, _jsonSerializerOptions);
-            if (appModules == null)
-                throw new InvalidOperationException("Failed to get list of PowerApps.");
-            return appModules.Values;
-        });
-
-        _canvasApps = new Lazy<Task<IList<CanvasApp>>>(async () =>
-        {
-            if (EnvironmentId == Guid.Empty)
-                throw new InvalidOperationException($"{nameof(EnvironmentId)} is not set.");
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildApiQueryUri($"powerapps/apps?%24expand=permissions%28%24filter%3DmaxAssignedTo%28%27{UserObjectId}%27%29%29&%24filter=classification+eq+%27SharedWithMeApps%27+and+environment+eq+%27{EnvironmentId}%27&api-version=1"));
-            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-
-            var appModules = JsonSerializer.Deserialize<ODataContext<CanvasApp>>(contentStream, _jsonSerializerOptions);
-            if (appModules == null)
-                throw new InvalidOperationException("Failed to get list of PowerApps.");
-            return appModules.Values;
-        });
-
-        _solutions = new Lazy<Task<IList<Solution>>>(async () =>
-        {
-            if (EnvironmentId == Guid.Empty)
-                throw new InvalidOperationException($"{nameof(EnvironmentId)} is not set.");
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"solutions?$expand=createdby,modifiedby&$filter=isvisible eq true"));
-            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-
-            var solutions = JsonSerializer.Deserialize<ODataContext<Solution>>(contentStream, _jsonSerializerOptions);
-            if (solutions == null)
-                throw new InvalidOperationException("Failed to get list of solutions.");
-            return solutions.Values;
-        });
-
-        _systemUsers = new Lazy<Task<IList<SystemUser>>>(async () =>
-        {
-            if (EnvironmentId == Guid.Empty)
-                throw new InvalidOperationException($"{nameof(EnvironmentId)} is not set.");
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"systemusers"));
-            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-
-            var systemUsers = JsonSerializer.Deserialize<ODataContext<SystemUser>>(contentStream, _jsonSerializerOptions);
-            if (systemUsers == null)
-                throw new InvalidOperationException("Failed to get list system users.");
-            return systemUsers.Values;
-        });
-
-        _roles = new Lazy<Task<IList<Role>>>(async () =>
-        {
-            if (EnvironmentId == Guid.Empty)
-                throw new InvalidOperationException($"{nameof(EnvironmentId)} is not set.");
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"roles?$expand=businessunitid"));
-            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-
-            var roles = JsonSerializer.Deserialize<ODataContext<Role>>(contentStream, _jsonSerializerOptions);
-            if (roles == null)
-                throw new InvalidOperationException("Failed to get list roles.");
-            return roles.Values;
-        });
     }
 
     public async Task LoadMetadata()
@@ -190,32 +124,32 @@ public partial class DataverseAIClient
 
         // Get environment details from Global Discovery Service
         using var gdsRequest = new HttpRequestMessage(HttpMethod.Get, $"https://globaldisco.crm.dynamics.com/api/discovery/v2.0/Instances?$filter=EnvironmentId eq '{EnvironmentId}'");
-        var gdsResponse = await _httpClient.SendAsync(gdsRequest).ConfigureAwait(false);
+        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+        var gdsResponse = await httpClient.SendAsync(gdsRequest).ConfigureAwait(false);
         gdsResponse.EnsureSuccessStatusCode();
         var parsedToken = new JwtSecurityToken(jwtEncodedString: gdsRequest.Headers.Authorization?.Parameter);
-        GivenName = parsedToken.Claims.FirstOrDefault(c => c.Type == "given_name")?.Value;
         FullName = parsedToken.Claims.FirstOrDefault(c => c.Type == "name")?.Value;
         UserObjectId = parsedToken.Claims.FirstOrDefault(c => c.Type == "oid")?.Value;
         var gdsContentStream = await gdsResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
-        var environments = JsonSerializer.Deserialize<ODataContext<EnvironmentInstance>>(gdsContentStream, _jsonSerializerOptions);
+        var environments = JsonSerializer.Deserialize<ODataContext<EnvironmentInstance>>(gdsContentStream, JsonSerializerOptions);
         if (environments == null || environments.Values.Count <= 0)
             throw new InvalidOperationException($"EnvironmentId '{EnvironmentId}' was not found.");
         EnvironmentInstance = environments.Values.First();
-        PowerPlatformApiPrefix = EnvironmentInstance.EnvironmentId.Replace("-", "");
-        PowerPlatformApiPrefix = PowerPlatformApiPrefix.Insert(PowerPlatformApiPrefix.Length - 2, ".");
+        PowerPlatformEnvironmentApiPrefix = EnvironmentInstance.EnvironmentId.Replace("-", "");
+        PowerPlatformEnvironmentApiPrefix = PowerPlatformEnvironmentApiPrefix.Insert(PowerPlatformEnvironmentApiPrefix.Length - 2, ".");
 
         // Get Dataverse Environment Metadata
         using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"EntityDefinitions"));
-        var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+        var response = await httpClient.SendAsync(request).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
-        var metadata = JsonSerializer.Deserialize<ODataContext<EntityMetadataModel>>(contentStream, _jsonSerializerOptions);
+        var metadata = JsonSerializer.Deserialize<ODataContext<EntityMetadataModel>>(contentStream, JsonSerializerOptions);
         if (metadata == null || metadata.Values.Count <= 0)
             throw new InvalidOperationException("No metadata was returned.");
         _entityMetadataModels = metadata.Values;
 
-        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"You are an assistant, helping '{FullName}' interact with Microsoft Power Platform."));
+        _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, MainSystemPrompt));
         _chatOptions.Messages.Add(new Azure.AI.OpenAI.ChatMessage(ChatRole.System, $"You are assisting **{FullName}**"));
 
         var listOfProperties = string.Join(", ", EntityMetadataModel.Properties.Values.ToBrowsableProperties());
@@ -235,6 +169,86 @@ public partial class DataverseAIClient
 
     #endregion
 
+    #region Run asyncronous tasks
+
+    /// <summary>
+    /// Starts asyncronous tasks which collect and cache data from Power Platform
+    /// </summary>
+    public void Run()
+    {
+        _organization = Task.Run(GetOrganization);
+        _user = Task.Run(GetMe);
+        _environments = Task.Run(GetEnvironments);
+        Task.Run(() => WelcomeMessage.NextWelcomeMessage(_liteDatabase, _openAIClient.Value, OpenApiModelInternal));
+    }
+
+    private async Task<IList<Metadata.Environment>> GetEnvironments()
+    {
+        if (_organization == null)
+            throw new InvalidOperationException("Organization is not requested.");
+        if (_user == null)
+            throw new InvalidOperationException("User is not requested.");
+
+        // Make sure organization and user is loaded
+        _organization.Wait();
+        _user.Wait();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, BuildTenantApiQueryUri($"powerapps/environments?&expand=properties.permissions&api-version=1&$filter=minimumAppPermission eq 'CanEdit' and properties.environmentSku ne 'Teams'"));
+        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+        var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+
+        var environments = JsonSerializer.Deserialize<ODataContext<Metadata.Environment>>(contentStream, JsonSerializerOptions);
+        if (environments == null)
+            throw new InvalidOperationException("Failed to get list of environments.");
+
+        // Inject authenticated HttpClient
+        foreach (var environment in environments.Values)
+        {
+            environment.HttpClientFactory = _httpClientFactory;
+            environment.User = _user.Result;
+            if (_userSettings.LastUsedEnvironmentId == environment.Name)
+                SelectedEnvironment = environment;
+        }
+
+        return environments.Values;
+    }
+
+    private async Task<User> GetMe()
+    {
+        var user = await _graphClient.Value.Me.GetAsync();
+        if (user == null)
+            throw new InvalidOperationException("Failed to get user details.");
+
+        _userSettings.GivenName = user.GivenName;
+        _userSettings.DisplayName = user.DisplayName;
+        _userSettings.EntraId = user.Id;
+        _userSettings.UserPrincipalName = user.UserPrincipalName;
+        _userSettings.Save();
+
+        return user;
+    }
+
+    private async Task<Organization> GetOrganization()
+    {
+        var organizationResponse = await _graphClient.Value.Organization.GetAsync((c) =>
+        {
+            c.QueryParameters.Select = new string[] { "id", "city", "country", "countryLetterCode", "displayName", "state", "street" };
+        });
+        if (organizationResponse == null || organizationResponse.Value == null || organizationResponse.Value.Count <= 0)
+            throw new InvalidOperationException("Failed to get organization details.");
+
+        var organization = organizationResponse.Value.First();
+
+        PowerPlatformTenantApiPrefix = organization.Id!.Replace("-", "");
+        PowerPlatformTenantApiPrefix = PowerPlatformTenantApiPrefix.Insert(PowerPlatformTenantApiPrefix.Length - 2, ".");
+
+        return organization;
+    }
+
+    #endregion
+
     #region Properties
 
     public Uri? OpenApiEndPoint { get; set; }
@@ -243,7 +257,7 @@ public partial class DataverseAIClient
 
     public string? OpenApiModel { get; set; }
 
-    public string? OpenApiModelInternal
+    public string OpenApiModelInternal
     {
         get
         {
@@ -267,11 +281,43 @@ public partial class DataverseAIClient
 
     public EnvironmentInstance EnvironmentInstance { get; private set; }
 
-    public string? GivenName { get; private set; }
+    public string? GivenName 
+    { 
+        get => _userSettings.GivenName;
+    } 
 
     public string? FullName { get; private set; }
 
     public string? UserObjectId { get; private set; }
+
+    public WelcomeMessage WelcomeMessage { get; private set; } = WelcomeMessage.Default;
+
+    public string AppDataFolderName { get; private set; } = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), LocalAppDataFolderName);
+
+    public Metadata.Environment? SelectedEnvironment
+    {
+        get => _selectedEnvironment;
+        set
+        {
+            if (value == null)
+            {
+                if (_userSettings.LastUsedEnvironmentId != null)
+                {
+                    _userSettings.LastUsedEnvironmentId = null;
+                    _userSettings.Save();
+                }
+            }
+            else
+            {
+                if (_userSettings.LastUsedEnvironmentId != value.Name)
+                {
+                    _userSettings.LastUsedEnvironmentId = value.Name;
+                    _userSettings.Save();
+                }
+            }
+            _selectedEnvironment = value;
+        }
+    }
 
     #endregion
 
@@ -387,10 +433,17 @@ public partial class DataverseAIClient
         return new Uri(EnvironmentInstance!.ApiUrl, $"api/data/v9.2/{query}");
     }
 
-    //[DebuggerStepThrough]
-    private Uri BuildApiQueryUri(string query)
+    [DebuggerStepThrough]
+    private Uri BuildTenantApiQueryUri(string query)
     {
-        var baseUri = new Uri($"https://{PowerPlatformApiPrefix}.environment.api.powerplatform.com");
+        var baseUri = new Uri($"https://{PowerPlatformTenantApiPrefix}.tenant.api.powerplatform.com");
+        return new Uri(baseUri, query);
+    }
+
+    [DebuggerStepThrough]
+    private Uri BuildEnvironmentApiQueryUri(string query)
+    {
+        var baseUri = new Uri($"https://{PowerPlatformEnvironmentApiPrefix}.environment.api.powerplatform.com");
         return new Uri(baseUri, query);
     }
 
@@ -399,11 +452,12 @@ public partial class DataverseAIClient
         var solutionComponents = new Dictionary<SolutionComponentType, Dictionary<Guid, SolutionComponent>>();
         var query = $"solutioncomponents?$filter=_solutionid_value eq '{solutionId}'";
         var uri = BuildOrgQueryUri(query);
-        var response = await _httpClient.GetAsync(uri);
+        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+        var response = await httpClient.GetAsync(uri);
         response.EnsureSuccessStatusCode();
         var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
-        var solutionComponentsData = JsonSerializer.Deserialize<ODataContext<SolutionComponent>>(contentStream, _jsonSerializerOptions);
+        var solutionComponentsData = JsonSerializer.Deserialize<ODataContext<SolutionComponent>>(contentStream, JsonSerializerOptions);
         if (solutionComponentsData == null)
             throw new InvalidOperationException("Failed to get list of solution components.");
 
@@ -461,6 +515,86 @@ public partial class DataverseAIClient
 
         return response.Equals("Yes", StringComparison.OrdinalIgnoreCase) ||
                response.Equals("Y", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public bool EnsureSelectedEnvironment(string environmentHint, out string response)
+    {
+        response = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(environmentHint))
+        {
+            if (SelectedEnvironment != null)
+                return true;
+            response = "Power Platform environement is required. Ask for a name";
+            return false;
+        }
+
+        _environments.Wait();
+
+        // 1. Exact match on name
+        foreach (var environment in _environments.Result)
+        {
+            if (environment == null)
+                continue;
+
+            if (string.Compare(environment.Properties.DisplayName, environmentHint, StringComparison.OrdinalIgnoreCase) == 0)
+            {
+                SelectedEnvironment = environment;
+                return true;
+            }
+        }
+
+        // 2. Exact substring match on name
+        foreach (var environment in _environments.Result)
+        {
+            if (environment == null)
+                continue;
+
+            if (environment.Properties.DisplayName.Contains(environmentHint, StringComparison.OrdinalIgnoreCase))
+            {
+                SelectedEnvironment = environment;
+                return true;
+            }
+        }
+
+        if (SelectedEnvironment != null)
+            return true;
+
+        response = "Power Platform environement is required. Ask for a name";
+        return false;
+    }
+    #endregion
+
+    #region IDisposable
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                // Dispose managed objects
+                _liteDatabase.Dispose();
+            }
+
+            // Free unmanaged resources (unmanaged objects) and override finalizer
+            // Set large fields to null
+            disposedValue = true;
+        }
+    }
+
+    // Override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    // ~DataverseAIClient()
+    // {
+    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    //     Dispose(disposing: false);
+    // }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 
     #endregion
