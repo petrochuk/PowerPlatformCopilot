@@ -15,3 +15,7 @@ usesOnPremiseGateway, usesPcfExternalServiceUsage, isCustomizable, and appDocume
 Click Play:
 
 ![Canvas App](assets/images/CanvasProperties.gif)
+
+Switching back and forth between environments, asking copilot to show last created canvas apps in different environments
+
+![Canvas App](assets/images/CanvasEnvironments.gif)
