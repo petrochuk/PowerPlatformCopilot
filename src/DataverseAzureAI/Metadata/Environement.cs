@@ -7,7 +7,6 @@ using System.Text.Json.Serialization;
 
 namespace AP2.DataverseAzureAI.Metadata;
 
-[DebuggerDisplay("{Properties.DisplayName}")]
 public class Environment
 {
     public string Id { get; set; }
@@ -127,6 +126,11 @@ public class Environment
     private Uri BuildOrgQueryUri(string query)
     {
         return new Uri(Properties.LinkedEnvironmentMetadata.InstanceApiUrl, $"api/data/v9.2/{query}");
+    }
+
+    override public string ToString()
+    {
+        return Properties.DisplayName;
     }
 }
 

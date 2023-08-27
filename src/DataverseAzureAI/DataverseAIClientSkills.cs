@@ -187,10 +187,10 @@ public partial class DataverseAIClient
         if (!EnsureSelectedEnvironment(environement, out var errorResponse))
             return errorResponse;
 
-        var canvasApps = await SelectedEnvironment.CanvasApps.Value.ConfigureAwait(false);
+        var canvasApps = await SelectedEnvironment!.CanvasApps.Value.ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(propertyName))
         {
-            return "List of canvas apps: " + string.Join(", ", canvasApps.Select(x => x.Properties.DisplayName));
+            return $"'{SelectedEnvironment}' has {canvasApps.Count} canvas app(s). DisplayName(s): " + string.Join(", ", canvasApps.Select(x => $"'{x.Properties.DisplayName}'"));
         }
 
         if (!CanvasAppProperties.Properties.TryGetValue(propertyName, out var propertyInfo))
