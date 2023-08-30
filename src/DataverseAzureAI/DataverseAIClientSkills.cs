@@ -1,13 +1,14 @@
+using AP2.DataverseAzureAI.Extensions;
+using AP2.DataverseAzureAI.Globalization;
+using AP2.DataverseAzureAI.Metadata;
+using Microsoft.Graph;
+using Microsoft.Graph.Models;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using AP2.DataverseAzureAI.Extensions;
-using AP2.DataverseAzureAI.Globalization;
-using AP2.DataverseAzureAI.Metadata;
-using Microsoft.Graph.Models;
 
 namespace AP2.DataverseAzureAI;
 
@@ -687,6 +688,42 @@ public partial class DataverseAIClient
         }
 
         return FunctionCompletedSuccessfully;
+    }
+
+    [Description("Returns list of security groups person member of")]
+    public async Task<string> ListSecurityGroups(
+        [Required, Description("Person's first name, last name or a email")]
+        string personName)
+    {
+        if (string.IsNullOrWhiteSpace(personName))
+            return "Person name is required. Ask for it";
+
+        var person = await FindPersonViaGraph(personName).ConfigureAwait(false);
+        if (person == null)
+            return $"Unable to find {personName}";
+
+        var stringBuilder = new StringBuilder();
+        var groups = await _graphClient.Value.Users[person.Id].MemberOf.GetAsync();
+        var pageIterator = PageIterator<DirectoryObject, DirectoryObjectCollectionResponse>.CreatePageIterator(_graphClient.Value, groups!,
+            (g) => { 
+                if (g is Group group)
+                {
+                    if (group.SecurityEnabled == true && 
+                        string.IsNullOrWhiteSpace(group.MembershipRule) &&
+                        !string.IsNullOrWhiteSpace(group.DisplayName))
+                    {
+                        if (stringBuilder.Length > 0)
+                            stringBuilder.Append(", ");
+                        stringBuilder.Append($"{group.DisplayName}");
+                    }
+                }
+                return true; 
+            }
+        );
+
+        await pageIterator.IterateAsync().ConfigureAwait(false);
+
+        return "Person name is required. Ask for it";
     }
 
     #endregion
