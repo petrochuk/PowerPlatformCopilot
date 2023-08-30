@@ -449,7 +449,9 @@ public partial class DataverseAIClient : IDisposable
     [DebuggerStepThrough]
     private Uri BuildOrgQueryUri(string query)
     {
-        return new Uri(EnvironmentInstance!.ApiUrl, $"api/data/v9.2/{query}");
+        _ = SelectedEnvironment ?? throw new InvalidOperationException("No environment selected");
+
+        return new Uri(SelectedEnvironment.Properties.LinkedEnvironmentMetadata.InstanceApiUrl, $"api/data/v9.2/{query}");
     }
 
     [DebuggerStepThrough]
