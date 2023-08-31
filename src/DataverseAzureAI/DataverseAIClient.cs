@@ -509,6 +509,7 @@ public partial class DataverseAIClient : IDisposable
         if (people == null || people.Value == null || people.Value.Count <= 0)
             return null;
 
+        // Exact match on person name
         foreach (var person in people.Value)
         {
             if (string.Compare(person.DisplayName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
@@ -516,6 +517,20 @@ public partial class DataverseAIClient : IDisposable
                 string.Compare(person.Surname, personName, StringComparison.OrdinalIgnoreCase) == 0)
             {
                 return person;
+            }
+        }
+
+        var personNameParts = personName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var personNamePart in personNameParts) 
+        { 
+            foreach (var person in people.Value)
+            {
+                if (string.Compare(person.DisplayName, personNamePart, StringComparison.OrdinalIgnoreCase) == 0 ||
+                    string.Compare(person.GivenName, personNamePart, StringComparison.OrdinalIgnoreCase) == 0 ||
+                    string.Compare(person.Surname, personNamePart, StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    return person;
+                }
             }
         }
 

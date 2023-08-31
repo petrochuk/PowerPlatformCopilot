@@ -32,4 +32,7 @@ public class ODataContext<T>
 
     [JsonPropertyName("value")]
     public IList<T> Values { get; set; }
+
+    [JsonPropertyName("@odata.nextLink")]
+    public string? NextLink { get; set; }
 }

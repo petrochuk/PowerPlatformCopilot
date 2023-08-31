@@ -76,16 +76,30 @@ public class Environment
 
         SystemUsers = new Lazy<Task<IList<SystemUser>>>(async () =>
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"systemusers"));
-            var httpClient = HttpClientFactory!.CreateClient(nameof(DataverseAIClient));
-            var response = await httpClient.SendAsync(request).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            var systemUsers = new List<SystemUser>();
+            var queryUri = BuildOrgQueryUri($"systemusers");
 
-            var systemUsers = JsonSerializer.Deserialize<ODataContext<SystemUser>>(contentStream, DataverseAIClient.JsonSerializerOptions);
-            if (systemUsers == null)
-                throw new InvalidOperationException("Failed to get list system users.");
-            return systemUsers.Values;
+            do
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, queryUri);
+                var httpClient = HttpClientFactory!.CreateClient(nameof(DataverseAIClient));
+                var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                var systemUsersResponse = JsonSerializer.Deserialize<ODataContext<SystemUser>>(contentStream, DataverseAIClient.JsonSerializerOptions);
+                if (systemUsersResponse == null)
+                    throw new InvalidOperationException("Failed to get list system users.");
+
+                if (!string.IsNullOrWhiteSpace(systemUsersResponse.NextLink))
+                    queryUri = new Uri(systemUsersResponse.NextLink);
+                else
+                    queryUri = null;
+
+                systemUsers.AddRange(systemUsersResponse.Values);
+            }
+            while (queryUri != null);
+
+            return systemUsers;
         });
 
         Roles = new Lazy<Task<IList<Role>>>(async () =>

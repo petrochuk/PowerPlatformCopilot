@@ -659,7 +659,7 @@ public partial class DataverseAIClient
         string environment,
         [Required, Description("Grant or Revoke permission")]
         string changeType,
-        [Required, Description("Person's first name, last name or a email to send email to or share link with")]
+        [Required, Description("Person's first name, or last name, or full name, or a email")]
         string personName,
         [Required, Description("Role name")]
         string roleName,
@@ -689,7 +689,7 @@ public partial class DataverseAIClient
             return $"Unable to find {personName} in {EnvironmentInstance.FriendlyName}";
 
         if (string.IsNullOrWhiteSpace(businessUnit))
-            businessUnit = EnvironmentInstance.UrlName;
+            businessUnit = SelectedEnvironment.Properties.LinkedEnvironmentMetadata.domainName;
 
         var role = roles.Result.FirstOrDefault(r => string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase) &&
                                              string.Equals(r.BusinessUnit.Name, businessUnit, StringComparison.OrdinalIgnoreCase));
@@ -708,9 +708,11 @@ public partial class DataverseAIClient
         request.Content = new StringContent($"{{\"@odata.id\":\"{BuildOrgQueryUri($"roles({role.RoleId})")}\"}}", Encoding.UTF8, "application/json");
         var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
         var response = await httpClient.SendAsync(request).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+            return responseContent;
 
-        return $"Granted '{role.BusinessUnit.Name}/{role.Name}' role to {systemUser.FullName}";
+        return $"Granted '{role.BusinessUnit.Name}/{role.Name}' role to {systemUser.FullName} in {SelectedEnvironment.Properties.DisplayName}";
     }
 
     #endregion
