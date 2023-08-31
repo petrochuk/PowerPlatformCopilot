@@ -1,8 +1,11 @@
 using AP2.DataverseAzureAI.Extensions;
 using AP2.DataverseAzureAI.Globalization;
 using AP2.DataverseAzureAI.Metadata;
+using AP2.DataverseAzureAI.Metadata.Actions;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
+using Microsoft.Graph.Models.Security;
+using Microsoft.OData.Edm;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
@@ -336,9 +339,9 @@ public partial class DataverseAIClient
         if (!EnsureSelectedEnvironment(environment, out var errorResponse))
             return errorResponse;
 
-        var solutions = await SelectedEnvironment!.Solutions.Value.ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(solutionName))
-            return "Solution name is required";
+            return "Solution name is required. Ask for it.";
+        var solutions = await SelectedEnvironment!.Solutions.Value.ConfigureAwait(false);
 
         foreach (var solution in solutions)
         {
@@ -358,6 +361,71 @@ public partial class DataverseAIClient
         return "Not implemented yet";
     }
 
+
+    [Description("Adds component to Dataverse solution")]
+    public async Task<string> AddSolutionComponent(
+        [Description("Power Platform environment")]
+        string environment,
+        [Description("Dataverse solution friendly, unique name or id")]
+        string solutionName,
+        [Description("Component type")]
+        string componentType,
+        [Description("Component name")]
+        string componentName)
+    {
+        if (!EnsureSelectedEnvironment(environment, out var errorResponse))
+            return errorResponse;
+
+        if (string.IsNullOrWhiteSpace(solutionName))
+            return "Solution name is required. Ask for it.";
+        var solutions = await SelectedEnvironment!.Solutions.Value.ConfigureAwait(false);
+
+        Solution? selectedSolution = null;
+        foreach (var solution in solutions)
+        {
+            if (string.Compare(solution.FriendlyName, solutionName, StringComparison.OrdinalIgnoreCase) != 0)
+            {
+                if (string.Compare(solution.UniqueName, solutionName, StringComparison.OrdinalIgnoreCase) != 0)
+                    continue;
+            }
+
+            selectedSolution = solution;
+            break;
+        }
+
+        if (selectedSolution == null)
+            return $"Solution '{solutionName}' was not found. Ask for different name or if you need to create new one.";
+
+        if (!Enum.TryParse(componentType, true, out SolutionComponentType componentTypeValue) || componentTypeValue != SolutionComponentType.CanvasApp)
+            return $"Component type '{componentType}' is not supported.";
+
+        var canvasApps = await SelectedEnvironment!.CanvasApps.Value.ConfigureAwait(false);
+        foreach (var canvasApp in canvasApps)
+        {
+            if (!string.Equals(componentName, canvasApp.Properties.DisplayName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (!ConfirmAction($"Do you want to add {canvasApp.Properties.DisplayName} to '{selectedSolution.FriendlyName}'?"))
+                return UserDeclinedAction;
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgQueryUri($"AddSolutionComponent"));
+            var addSolutionComponent = new AddSolutionComponent
+            {
+                ComponentId = canvasApp.Name,
+                ComponentType = (int)componentTypeValue,
+                SolutionUniqueName = selectedSolution.UniqueName
+            };
+            request.Content = new StringContent(JsonSerializer.Serialize(addSolutionComponent, JsonSerializerOptions), Encoding.UTF8, "application/json");
+            var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+            var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            return $"Canvas app '{canvasApp.Properties.DisplayName}' added to '{selectedSolution.FriendlyName}' solution";
+
+        }
+        return $"Solution '{solutionName}' was not found.";
+    }
+
     [Description("Returns property value for specified Dataverse solution")]
     public async Task<string> GetSolutionPropertyValue(
         [Description("Power Platform environment")]
@@ -370,7 +438,7 @@ public partial class DataverseAIClient
         if (!EnsureSelectedEnvironment(environment, out var errorResponse))
             return errorResponse;
         if (string.IsNullOrWhiteSpace(solutionName))
-            return "Solution name is required";
+            return "Solution name is required. Ask for it.";
         if (string.IsNullOrWhiteSpace(propertyName) || !Solution.Properties.TryGetValue(propertyName, out var propertyInfo))
             return PropertyNotFound;
         if (propertyInfo.Name == nameof(Solution.Components))
@@ -390,6 +458,53 @@ public partial class DataverseAIClient
         }
 
         return $"Not found any solutions matching '{solutionName}' filter";
+    }
+
+    [Description("Exports Power Platform solution and saves it to local file")]
+    public async Task<string> ExportSolution(
+        [Description("Power Platform environment")]
+        string environment,
+        [Description("Dataverse solution friendly, unique name or id")]
+        string solutionName,
+        [Description("Folder name or file name")]
+        string saveLocation)
+    {
+        if (!EnsureSelectedEnvironment(environment, out var errorResponse))
+            return errorResponse;
+        if (string.IsNullOrWhiteSpace(solutionName))
+            return "Solution name is required. Ask for it.";
+
+        var solutions = await SelectedEnvironment!.Solutions.Value.ConfigureAwait(false);
+        foreach (var solution in solutions)
+        {
+            if (string.Compare(solution.FriendlyName, solutionName, StringComparison.OrdinalIgnoreCase) == 0 ||
+                string.Compare(solution.UniqueName, solutionName, StringComparison.OrdinalIgnoreCase) == 0 ||
+                string.Compare(solution.SolutionId.ToString(), solutionName, StringComparison.OrdinalIgnoreCase) == 0)
+            {
+                if (!FindLocalFolder(saveLocation, out var filePath, out var response))
+                    return response;
+
+                filePath = Path.Combine(filePath, $"{solution.FriendlyName}.zip");
+                if (!ConfirmAction($"Do you want to save solution '{solution.FriendlyName}' to '{filePath}'?"))
+                    return UserDeclinedAction;
+
+                var exportSolution = new ExportSolution() { SolutionName = solution.UniqueName };
+                using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgQueryUri($"ExportSolution"));
+                request.Content = new StringContent(JsonSerializer.Serialize(exportSolution, JsonSerializerOptions), Encoding.UTF8, "application/json");
+                var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+                var httpResponse = await httpClient.SendAsync(request).ConfigureAwait(false);
+                httpResponse.EnsureSuccessStatusCode();
+                var exportSolutionResponse = JsonSerializer.Deserialize<ExportSolutionResponse>(await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false), JsonSerializerOptions);
+                using (var fs = new FileStream(filePath, FileMode.CreateNew))
+                {
+                    fs.Write(Convert.FromBase64String(exportSolutionResponse.ExportSolutionFile));
+                }
+
+                return $"Solution '{solution.FriendlyName}' saved to '{filePath}'";
+            }
+        }
+
+        return $"Not found any solutions matching '{solutionName}' name";
     }
 
     #endregion
@@ -465,24 +580,8 @@ public partial class DataverseAIClient
             if (string.IsNullOrWhiteSpace(saveLocation))
                 return "You need to ask user for directory name to save the app";
 
-            var filePath = string.Empty;
-            if (!Directory.Exists(saveLocation))
-            {
-                var dirs = Directory.GetDirectories(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "*", SearchOption.AllDirectories);
-                foreach (var dir in dirs)
-                {
-                    if (dir.EndsWith(saveLocation, StringComparison.OrdinalIgnoreCase))
-                    {
-                        filePath = dir;
-                        break;
-                    }
-                }
-            }
-            else
-                filePath = saveLocation;
-
-            if (string.IsNullOrWhiteSpace(filePath))
-                return $"Directory '{saveLocation}' doesn't exist. You need to ask user for different directory name";
+            if (!FindLocalFolder(saveLocation, out var filePath, out var response))
+                return response;
 
             if (!EnsureSelectedEnvironment(environment, out var errorResponse))
                 return errorResponse;
@@ -493,23 +592,17 @@ public partial class DataverseAIClient
                 if (string.Equals(itemName, canvasApp.Properties.DisplayName, StringComparison.OrdinalIgnoreCase))
                 {
                     filePath = Path.Combine(filePath, $"{canvasApp.Properties.DisplayName}.msapp");
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine();
-                    Console.Write($"Do you want to save Canvas App '{itemName}' to '{filePath}'? [Yes]/No:");
-                    Console.ResetColor();
-                    var response = Console.ReadLine();
-                    if (string.IsNullOrWhiteSpace(response) ||
-                        response.Equals("Yes", StringComparison.OrdinalIgnoreCase) ||
-                        response.Equals("Y", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Download the app to file
-                        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
-                        var responseStream = await httpClient.GetStreamAsync(canvasApp.Properties.AppUris.documentUri.value);
-                        using var fileStream = new FileStream(filePath, FileMode.Create);
-                        responseStream.CopyTo(fileStream);
-                        Console.WriteLine($"Done");
-                        return $"Canvas App '{itemName}' was saved.";
-                    }
+
+                    if (!ConfirmAction($"Do you want to save Canvas App '{itemName}' to '{filePath}'?"))
+                        return UserDeclinedAction;
+
+                    // Download the app to file
+                    var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+                    var responseStream = await httpClient.GetStreamAsync(canvasApp.Properties.AppUris.documentUri.value);
+                    using var fileStream = new FileStream(filePath, FileMode.Create);
+                    responseStream.CopyTo(fileStream);
+                    Console.WriteLine($"Done");
+                    return $"Canvas App '{itemName}' was saved.";
                 }
             }
             return $"Canvas App '{itemName}' is not found.";
@@ -521,7 +614,7 @@ public partial class DataverseAIClient
 
     #region Create
 
-    [Description("Creates new items, records or anything else inside PowerPlatform including but not limited to apps, solutions, tables, users, components")]
+    [Description("Creates new objects inside Power Platform including but not limited to apps, solutions, tables, users, components, records")]
     public async Task<string> CreateItemInsidePowerPlatform(
         [Description("Power Platform environment")]
         string environment,
@@ -549,6 +642,8 @@ public partial class DataverseAIClient
             var response = await httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
+            SelectedEnvironment!.RefreshSolutions();
+            return $"Solution '{itemName}' was created";
         }
 
         return $"Don't know how to create {itemType}";

@@ -44,19 +44,7 @@ public class Environment
 
     public Environment()
     {
-        Solutions = new Lazy<Task<IList<Solution>>>(async () =>
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"solutions?$expand=createdby,modifiedby,publisherid&$filter=isvisible eq true"));
-            var httpClient = HttpClientFactory!.CreateClient(nameof(DataverseAIClient));
-            var response = await httpClient.SendAsync(request).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-
-            var solutions = JsonSerializer.Deserialize<ODataContext<Solution>>(contentStream, DataverseAIClient.JsonSerializerOptions);
-            if (solutions == null)
-                throw new InvalidOperationException("Failed to get list of solutions.");
-            return solutions.Values;
-        });
+        RefreshSolutions();
 
         CanvasApps = new Lazy<Task<IList<CanvasApp>>>(async () =>
         {
@@ -112,6 +100,23 @@ public class Environment
             if (roles == null)
                 throw new InvalidOperationException("Failed to get list roles.");
             return roles.Values;
+        });
+    }
+
+    public void RefreshSolutions()
+    {
+        Solutions = new Lazy<Task<IList<Solution>>>(async () =>
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"solutions?$expand=createdby,modifiedby,publisherid&$filter=isvisible eq true"));
+            var httpClient = HttpClientFactory!.CreateClient(nameof(DataverseAIClient));
+            var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+
+            var solutions = JsonSerializer.Deserialize<ODataContext<Solution>>(contentStream, DataverseAIClient.JsonSerializerOptions);
+            if (solutions == null)
+                throw new InvalidOperationException("Failed to get list of solutions.");
+            return solutions.Values;
         });
     }
 

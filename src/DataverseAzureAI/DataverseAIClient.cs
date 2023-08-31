@@ -546,7 +546,7 @@ public partial class DataverseAIClient : IDisposable
         {
             if (SelectedEnvironment != null)
                 return true;
-            response = "Power Platform environement is required. Ask for a name";
+            response = "Power Platform environment is required. Ask for a name";
             return false;
         }
 
@@ -581,9 +581,38 @@ public partial class DataverseAIClient : IDisposable
         if (SelectedEnvironment != null)
             return true;
 
-        response = "Power Platform environement is required. Ask for a name";
+        response = "Power Platform environment is required. Ask for a name";
         return false;
     }
+
+    public bool FindLocalFolder(string saveLocation, out string filePath, out string response)
+    {
+        response = string.Empty;
+        filePath = string.Empty;
+        if (!Directory.Exists(saveLocation))
+        {
+            var dirs = Directory.GetDirectories(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "*", SearchOption.AllDirectories);
+            foreach (var dir in dirs)
+            {
+                if (dir.EndsWith(saveLocation, StringComparison.OrdinalIgnoreCase))
+                {
+                    filePath = dir;
+                    break;
+                }
+            }
+        }
+        else
+            filePath = saveLocation;
+
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            response = $"Directory '{saveLocation}' doesn't exist. You need to ask user for different directory name";
+            return false;
+        }
+
+        return true;
+    }
+
     #endregion
 
     #region IDisposable
