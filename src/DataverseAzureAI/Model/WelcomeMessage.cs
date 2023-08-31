@@ -41,10 +41,10 @@ public class WelcomeMessage
     {
         var chatOptions = new ChatCompletionsOptions()
         {
-            Temperature = 2,
+            Temperature = 1.95f,
             MaxTokens = 200,
             NucleusSamplingFactor = 1,
-            FrequencyPenalty = 0,
+            FrequencyPenalty = 2,
             PresencePenalty = 2,
         };
 
