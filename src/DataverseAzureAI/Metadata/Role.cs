@@ -22,7 +22,7 @@ public class Role
     public int isinherited { get; set; }
     public string _roletemplateid_value { get; set; }
     public string Name { get; set; }
-    public int versionnumber { get; set; }
+    public long versionnumber { get; set; }
     public object _createdonbehalfby_value { get; set; }
     public string _modifiedby_value { get; set; }
     public DateTime createdon { get; set; }

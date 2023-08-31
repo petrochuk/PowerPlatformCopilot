@@ -135,7 +135,7 @@ public class SystemUser
     public int outgoingemaildeliverymethod { get; set; }
     public object address2_line2 { get; set; }
     public object entityimage_timestamp { get; set; }
-    public int versionnumber { get; set; }
+    public long versionnumber { get; set; }
     public object disabledreason { get; set; }
 
     public override string ToString()
