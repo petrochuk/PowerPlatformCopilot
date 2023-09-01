@@ -505,7 +505,10 @@ public partial class DataverseAIClient : IDisposable
 
         personName = personName.Trim();
 
-        var people = await _graphClient.Value.Me.People.GetAsync().ConfigureAwait(false);
+        var people = await _graphClient.Value.Me.People.GetAsync((c) =>
+        {
+            c.QueryParameters.Top = 300;
+        }).ConfigureAwait(false);
         if (people == null || people.Value == null || people.Value.Count <= 0)
             return null;
 

@@ -117,6 +117,40 @@ public class Environment
         });
     }
 
+    public async Task<SystemUser?> GetSystemUser(string internalEmailAddress)
+    {
+        if(!SystemUsers.IsValueCreated)
+        {
+            SystemUsers = new Lazy<Task<IList<SystemUser>>>(() =>
+            {
+                return Task.FromResult<IList<SystemUser>>(new List<SystemUser>());
+            });
+        }
+        var systemUsers = await SystemUsers.Value.ConfigureAwait(false);
+        var systemUser = systemUsers.FirstOrDefault(s => string.Equals(s.InternalEmailAddress, internalEmailAddress, StringComparison.OrdinalIgnoreCase));
+        if (systemUser != null)
+            return systemUser;
+
+        var queryUri = BuildOrgQueryUri($"systemusers?$filter=windowsliveid eq '{internalEmailAddress}'");
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, queryUri);
+        var httpClient = HttpClientFactory!.CreateClient(nameof(DataverseAIClient));
+        var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        var systemUsersResponse = JsonSerializer.Deserialize<ODataContext<SystemUser>>(contentStream, DataverseAIClient.JsonSerializerOptions);
+        if (systemUsersResponse == null)
+            throw new InvalidOperationException("Failed to get list system users.");
+        systemUser = systemUsersResponse.Values.FirstOrDefault();
+        if (systemUser == null)
+            return null;
+
+        // Cache it
+        systemUsers.Add(systemUser);
+
+        return systemUser;
+    }
+
     public void RefreshSolutions()
     {
         Solutions = new Lazy<Task<IList<Solution>>>(async () =>

@@ -676,17 +676,16 @@ public partial class DataverseAIClient
             return "Role name is required. Ask for role name.";
 
         // Send async requests in parallel
-        var systemUsers = SelectedEnvironment!.SystemUsers.Value;
         var person = FindPersonViaGraph(personName);
         var roles = SelectedEnvironment.Roles.Value;
 
-        await Task.WhenAll(systemUsers, person, roles);
+        await Task.WhenAll(person, roles);
         if (person.Result == null)
             return $"Unable to find {personName}";
 
-        var systemUser = systemUsers.Result.FirstOrDefault(s => string.Equals(s.InternalEmailAddress, person.Result.UserPrincipalName, StringComparison.OrdinalIgnoreCase));
+        var systemUser = await SelectedEnvironment!.GetSystemUser(person.Result.UserPrincipalName);
         if (systemUser == null)
-            return $"Unable to find {personName} in {EnvironmentInstance.FriendlyName}";
+            return $"Unable to find {personName} in {SelectedEnvironment.Properties.DisplayName}";
 
         if (string.IsNullOrWhiteSpace(businessUnit))
             businessUnit = SelectedEnvironment.Properties.LinkedEnvironmentMetadata.domainName;
@@ -698,7 +697,7 @@ public partial class DataverseAIClient
             role = roles.Result.FirstOrDefault(r => r.Name.Contains(roleName, StringComparison.OrdinalIgnoreCase) &&
                                                  string.Equals(r.BusinessUnit.Name, businessUnit, StringComparison.OrdinalIgnoreCase));
             if (role == null)
-                return $"Unable to find role {roleName} in {EnvironmentInstance.FriendlyName}";
+                return $"Unable to find role {roleName} in {SelectedEnvironment.Properties.DisplayName}";
         }
 
         if (!ConfirmAction($"Do you want to grant '{role.BusinessUnit.Name}/{role.Name}' role to {systemUser.FullName}?"))
