@@ -504,6 +504,12 @@ public partial class DataverseAIClient : IDisposable
             throw new ArgumentNullException(nameof(personName));
 
         personName = personName.Trim();
+        if (string.Compare(personName, "I", StringComparison.OrdinalIgnoreCase) == 0 ||
+            string.Compare(personName, "me", StringComparison.OrdinalIgnoreCase) == 0)
+        {
+            _user!.Wait();
+            return new Person() { DisplayName = _user.Result.DisplayName, UserPrincipalName = _user.Result.UserPrincipalName };
+        }
 
         var people = await _graphClient.Value.Me.People.GetAsync((c) =>
         {

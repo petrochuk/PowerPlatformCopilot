@@ -169,21 +169,21 @@ public class Environment
     }
 
     [DebuggerStepThrough]
-    private Uri BuildEnvironmentApiQueryUri(string query)
+    public Uri BuildEnvironmentApiQueryUri(string query)
     {
         var baseUri = new Uri($"https://{EnvironmentApiPrefix}.environment.api.powerplatform.com");
         return new Uri(baseUri, query);
     }
 
     [DebuggerStepThrough]
-    private Uri BuildOrgQueryUri(string query)
+    public Uri BuildOrgQueryUri(string query)
     {
         return new Uri(Properties.LinkedEnvironmentMetadata.InstanceApiUrl, $"api/data/v9.2/{query}");
     }
 
     override public string ToString()
     {
-        return Properties.DisplayName;
+        return Properties?.DisplayName;
     }
 }
 
