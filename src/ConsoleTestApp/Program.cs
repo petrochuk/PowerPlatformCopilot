@@ -11,11 +11,42 @@ namespace ConsoleTestApp;
 
 internal class Program
 {
-    const string DataverseAIAssistantName = "Dataverse AI Assistant";
+    const string DataverseAIAssistantName = "ProDev Copilot";
     private static IHost? _host;
 
     private async Task Run(string[] args)
     {
+        /* Save canvas demo
+        _demo.Add("which canvas apps do I have?");
+        _demo.Add("how do I export one of them as msapp file from Power Apps Maker Studio?");
+        _demo.Add("Too many steps, just save first one to SavedApps");
+        */
+        /* Roles
+        _demo.Add("give Person 1 a maker role in DevTools");
+        _demo.Add("and Person 2 too");
+        _demo.Add("and make Person 3 customizer");
+        _demo.Add("Person 4 can be sys admin in ProDev");
+        */
+        /* Email and Share
+        _demo.Add("which canvas apps were modified this month?");
+        _demo.Add("and in Env1 environment?");
+        _demo.Add("email me this list");
+        _demo.Add("Share first three with Person 5");
+        */
+                
+        /* Email and Share
+        _demo.Add("which canvas apps I modified this week?");
+        _demo.Add("How can I deploy 'Equipment Request App' to different environment? I heard I need to use solutions.");
+        _demo.Add("Which solutions do I have here?");
+        _demo.Add("Which ones are unmanaged?");
+        _demo.Add("who created second solution?");
+        _demo.Add("What's inside it?");
+        _demo.Add("Just create new solution named Power Apps Demo Fest");
+        _demo.Add("Add 'Equipment Request App' to it");
+        _demo.Add("Export the solution to SavedApps");
+        _demo.Add("Email my boss I am finished");
+        */
+
         using var client = _host!.Services.GetRequiredService<DataverseAIClient>();
 
         WriteLine(ConsoleColor.Magenta, client.WelcomeMessage);
@@ -36,6 +67,9 @@ internal class Program
         }
     }
 
+    private List<string> _demo = new List<string>();
+    Random _random = new Random();
+
     private string GetPrompt(string[] args, DataverseAIClient client)
     {
         WriteLine(ConsoleColor.Gray, $"{(client.GivenName != null ? client.GivenName : "User")}:");
@@ -44,7 +78,28 @@ internal class Program
         string prompt;
         if (args.Length <= 0)
         {
-            prompt = Console.ReadLine() ?? string.Empty;
+            var nextPrompt = _demo.FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(nextPrompt))
+            {
+                var key = Console.ReadKey();
+                if (key.Key != ConsoleKey.Enter)
+                {
+                    prompt = Console.ReadLine() ?? string.Empty;
+                    return key.KeyChar + prompt;
+                }
+                _demo.RemoveAt(0);
+                foreach(var character in nextPrompt)
+                {
+                    Console.Write(character);
+                    if (character == ',')
+                        Thread.Sleep(500);
+                    else
+                        Thread.Sleep(_random.Next(50, 200));
+                }
+                Console.WriteLine();
+                return nextPrompt;
+            }
+            return Console.ReadLine() ?? string.Empty;
         }
         else
         {
