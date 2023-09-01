@@ -123,6 +123,8 @@ public static class TimeExtensions
                     parts = new[] { "previous", compareTo.Substring(8) };
                 else if (compareTo.StartsWith("next", StringComparison.OrdinalIgnoreCase))
                     parts = new[] { "next", compareTo.Substring(4) };
+                else if (compareTo.StartsWith("this", StringComparison.OrdinalIgnoreCase))
+                    parts = new[] { "this", compareTo.Substring(4) };
                 else
                     return false;
             }
@@ -156,8 +158,33 @@ public static class TimeExtensions
                     else
                         return false;
                 }
+                else if (string.Compare(parts[0], "this", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    if (Strings.Day.ContainsKey(parts[1]))
+                    {
+                        startDateTime = timeProvider.GetLocalNow().Date;
+                        endDateTime = startDateTime.AddDays(1);
+                    }
+                    else if (Strings.Week.ContainsKey(parts[1]))
+                    {
+                        startDateTime = timeProvider.GetLocalNow().StartOfWeek(DayOfWeek.Sunday);
+                        endDateTime = startDateTime.AddDays(7);
+                    }
+                    else if (Strings.Month.ContainsKey(parts[1]))
+                    {
+                        startDateTime = (new DateTime(timeProvider.GetLocalNow().Year, timeProvider.GetLocalNow().Month, 1));
+                        endDateTime = startDateTime.AddMonths(1);
+                    }
+                    else if (string.Compare(parts[1], "year", StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        startDateTime = new DateTime(timeProvider.GetLocalNow().Year, 1, 1);
+                        endDateTime = new DateTime(timeProvider.GetLocalNow().Year + 1, 1, 1);
+                    }
+                    else
+                        return false;
+                }
                 else // TODO add Next
-                    return false;
+                            return false;
             }
             else if (2 < parts.Length)
             {
@@ -210,7 +237,7 @@ public static class TimeExtensions
                 return false;
         }
 
-        return dateTime >= startDateTime && dateTime < endDateTime;
+        return dateTime.ToLocalTime() >= startDateTime && dateTime.ToLocalTime() < endDateTime;
     }
 
     /// <summary>
