@@ -44,7 +44,7 @@ public class Solution
     public object pinpointsolutionid { get; set; }
     public string FriendlyName { get; set; }
     public string _organizationid_value { get; set; }
-    public int VersionNumber { get; set; }
+    public long VersionNumber { get; set; }
     public object templatesuffix { get; set; }
     public string upgradeinfo { get; set; }
 

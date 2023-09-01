@@ -202,7 +202,7 @@ public partial class DataverseAIClient
             return PropertyNotFound;
         }
         
-        if (Strings.Last.ContainsKey(propertyValueFilter))
+        if (propertyValueFilter != null && Strings.Last.ContainsKey(propertyValueFilter))
         {
             CanvasApp? singleResult = null;
             foreach (var canvasApp in canvasApps)
@@ -217,7 +217,7 @@ public partial class DataverseAIClient
                     singleResult = canvasApp;
             }
 
-            return singleResult == null ? PowerAppsNotFound : $"Found: {singleResult.Properties.DisplayName}";
+            return singleResult == null ? PowerAppsNotFound : $"Found this canvas app: '{singleResult.Properties.DisplayName}'";
         }
         else
         {
@@ -225,13 +225,13 @@ public partial class DataverseAIClient
             foreach (var canvasApp in canvasApps)
             {
                 if (propertyInfo.Equals(canvasApp.Properties, propertyValueFilter, _timeProvider))
-                    result.Add(canvasApp.Properties.DisplayName);
+                    result.Add($"'{canvasApp.Properties.DisplayName}'");
             }
 
             if (result.Count == 0)
                 return PowerAppsNotFound;
 
-            return "List of canvas apps: " + string.Join(", ", result);
+            return "Found these canvas apps matching filter: " + string.Join(", ", result);
         }
     }
 
@@ -421,9 +421,9 @@ public partial class DataverseAIClient
             response.EnsureSuccessStatusCode();
 
             return $"Canvas app '{canvasApp.Properties.DisplayName}' added to '{selectedSolution.FriendlyName}' solution";
-
         }
-        return $"Solution '{solutionName}' was not found.";
+
+        return $"Canvas app '{componentName}' was not found.";
     }
 
     [Description("Returns property value for specified Dataverse solution")]
@@ -517,19 +517,19 @@ public partial class DataverseAIClient
         string itemType,
         [Required, Description("Name for an item")]
         string itemName,
-        [Required, Description("Person's first name, last name or a email to send email to or share link with")]
-        string personName,
+        [Required, Description("Personal pronoun such as 'I', 'me', co-worker's first, last name, or full name to send email to or share link with")]
+        string userFirstLastOrPronoun,
         [Required, Description("Suggested email or message subject/title")]
         string emailTitle,
         [Required, Description("Suggested email or message body text")]
         string emailBody)
     {
-        if (string.IsNullOrWhiteSpace(personName))
-            return "Person name is required";
+        if (string.IsNullOrWhiteSpace(userFirstLastOrPronoun))
+            return "Person name is required. Ask for it.";
 
-        var person = await FindPersonViaGraph(personName).ConfigureAwait(false);
+        var person = await FindPersonViaGraph(userFirstLastOrPronoun).ConfigureAwait(false);
         if (person == null) 
-            return $"Unable to find {personName}";
+            return $"Unable to find {userFirstLastOrPronoun}";
 
         var message = new Message
         {
@@ -551,7 +551,7 @@ public partial class DataverseAIClient
             SaveToSentItems = false
         };
         await _graphClient.Value.Me.SendMail.PostAsync(body);
-        return $"Sent message to {person.DisplayName} ({person.UserPrincipalName})";
+        return $"Sent email message to {person.DisplayName} ({person.UserPrincipalName})";
     }
 
     #endregion
@@ -636,14 +636,14 @@ public partial class DataverseAIClient
                 return UserDeclinedAction;
 
             using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgQueryUri($"solutions"));
-            var solutionCreate = new SolutionCreate() { FriendlyName = itemName, UniqueName = itemName };
+            var solutionCreate = new SolutionCreate() { FriendlyName = itemName, UniqueName = itemName.Replace(" ", "") };
             request.Content = new StringContent(JsonSerializer.Serialize(solutionCreate, JsonSerializerOptions), Encoding.UTF8, "application/json");
             var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
             var response = await httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             SelectedEnvironment!.RefreshSolutions();
-            return $"Solution '{itemName}' was created";
+            return $"Solution '{itemName}' was successfully created";
         }
 
         return $"Don't know how to create {itemType}";
@@ -776,7 +776,7 @@ public partial class DataverseAIClient
         {
             Console.WriteLine($"Sharing '{canvasApp.Properties.DisplayName}' with {person.Result.DisplayName}");
             var requestBody = JsonSerializer.Serialize(updatePermissionRequest, JsonSerializerOptions);
-            using var request = new HttpRequestMessage(HttpMethod.Post, BuildEnvironmentApiQueryUri($"powerapps/apps/{canvasApp.Name}/modifyPermissions?%24filter=environment+eq+%27{EnvironmentInstance.EnvironmentId}%27&api-version=1"));
+            using var request = new HttpRequestMessage(HttpMethod.Post, SelectedEnvironment.BuildEnvironmentApiQueryUri($"powerapps/apps/{canvasApp.Name}/modifyPermissions?%24filter=environment+eq+%27{SelectedEnvironment!.Name}%27&api-version=1"));
             request.Content = new StringContent(JsonSerializer.Serialize(updatePermissionRequest, JsonSerializerOptions), Encoding.UTF8, "application/json");
             var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
             var response = await httpClient.SendAsync(request).ConfigureAwait(false);

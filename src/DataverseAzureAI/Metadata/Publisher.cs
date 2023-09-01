@@ -50,7 +50,7 @@ public class Publisher
     public object address2_line2 { get; set; }
     public object address2_postalcode { get; set; }
     public string _organizationid_value { get; set; }
-    public int versionnumber { get; set; }
+    public long versionnumber { get; set; }
     public object address2_upszone { get; set; }
     public object address2_longitude { get; set; }
     public object address1_fax { get; set; }
