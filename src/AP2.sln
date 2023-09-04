@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataverseAzureAI", "Dataver
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleTestApp", "ConsoleTestApp\ConsoleTestApp.csproj", "{0A391DA3-FDA7-4E87-8875-2B6D3554AFC2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataverseAzureAI-Tests", "DataverseAzureAI-Tests\DataverseAzureAI-Tests.csproj", "{C5111936-F0EF-4CC9-A66E-FBC895135849}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataverseAzureAI-Tests", "DataverseAzureAI-Tests\DataverseAzureAI-Tests.csproj", "{C5111936-F0EF-4CC9-A66E-FBC895135849}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ap2", "ap2\ap2.csproj", "{9CC3C635-A121-4F30-88FC-6241BA23F62E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,12 @@ Global
 		{C5111936-F0EF-4CC9-A66E-FBC895135849}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C5111936-F0EF-4CC9-A66E-FBC895135849}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C5111936-F0EF-4CC9-A66E-FBC895135849}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CC3C635-A121-4F30-88FC-6241BA23F62E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CC3C635-A121-4F30-88FC-6241BA23F62E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CC3C635-A121-4F30-88FC-6241BA23F62E}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{9CC3C635-A121-4F30-88FC-6241BA23F62E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CC3C635-A121-4F30-88FC-6241BA23F62E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CC3C635-A121-4F30-88FC-6241BA23F62E}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
