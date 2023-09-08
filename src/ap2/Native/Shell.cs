@@ -1,3 +1,4 @@
+using System.Data;
 using System.Runtime.InteropServices;
 
 namespace ap2.Native;
@@ -23,6 +24,18 @@ public static class Shell
     [DllImport("shell32.dll", SetLastError = true)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     public static extern bool Shell_NotifyIcon(NotifyIconMessages dwMessage, ref NotifyIconData notifyIconData);
+
+    [DllImport("Shcore.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    public static extern int GetDpiForMonitor(IntPtr hMonitor, MONITOR_DPI_TYPE dpiType, out uint dpiX, out uint dpiY);
+
+    public enum MONITOR_DPI_TYPE
+    {
+        EFFECTIVE_DPI = 0,
+        ANGULAR_DPI = 1,
+        RAW_DPI = 2,
+        DEFAULT
+    };
 
     public static NotifyIcon AddNotifyIcon(string toolTip, Guid iconId, IntPtr? hWnd = null)
     {

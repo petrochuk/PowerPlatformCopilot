@@ -14,8 +14,8 @@ public static class MauiProgram
     private static extern void XamlCheckProcessRequirements();
 
     static readonly Guid _iconId = new Guid("1eb514a6-f95e-45fd-83b7-007af0791d6d");
-    const int DefaultWidth = 300;
-    const int DefaultHeight = 150;
+    const double DefaultWidth = 300;
+    const double DefaultHeight = 150;
 
     [STAThread]
     public static void Main(string[] args)
@@ -48,9 +48,15 @@ public static class MauiProgram
                     case WindowsMessage.WM_LBUTTONUP:
                         if (_app == null)
                         {
+                            var monitor = NativeMethods.MonitorFromPoint(new NativeMethods.POINT() 
+                                { X = _openPosition.X, Y = _openPosition.Y }, NativeMethods.MonitorFromPointFlags.MONITOR_DEFAULTTONEAREST);
+                            ap2.Native.Shell.GetDpiForMonitor(monitor, ap2.Native.Shell.MONITOR_DPI_TYPE.EFFECTIVE_DPI, out uint dpiX, out uint dpiY);
+                            int scaledWidth = (int)(DefaultWidth * dpiX / 96.0);
+                            int scaledHeight = (int)(DefaultHeight * dpiY / 96.0);
                             _openPosition = new Windows.Graphics.RectInt32(
-                                (short)wParam - DefaultWidth, (short)((uint)wParam >> 16) - DefaultHeight, DefaultWidth, DefaultHeight);
-                            var monitor = NativeMethods.MonitorFromPoint(new NativeMethods.POINT() { X = _openPosition.X, Y = _openPosition.Y }, NativeMethods.MonitorFromPointFlags.MONITOR_DEFAULTTONEAREST);
+                                (short)wParam - scaledWidth, (short)((uint)wParam >> 16) - scaledHeight, 
+                                scaledWidth, scaledHeight);
+                            
                             var monitorInfo = new NativeMethods.MONITORINFOEX();
                             NativeMethods.GetMonitorInfo(new HandleRef(null, monitor), monitorInfo);
                             var horizontalAdjustment = monitorInfo.rcWork.Width - (_openPosition.X + _openPosition.Width);
@@ -77,6 +83,8 @@ public static class MauiProgram
                         }
                         break;
                     case WindowsMessage.WM_CONTEXTMENU:
+                        break;
+                    case WindowsMessage.WM_DPICHANGED:
                         break;
                     default:
                         //Debug.WriteLine($"NotificationWndProc: {iconMessage}");
