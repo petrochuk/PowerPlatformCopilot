@@ -31,13 +31,17 @@ public partial class MainPage : ContentPage
             !e.NewTextValue.EndsWith(Environment.NewLine))
             return;
 
+        var promptText = _prompt.Text.Trim(new char[] { ' ', '\n', '\r' });
+        if (string.IsNullOrWhiteSpace(promptText))
+            return;
+
         var lastRowDefinition = _grid.RowDefinitions.Last();
         _grid.RowDefinitions.Add(new RowDefinition { Height = _prompt.Height });
         _prompt.SetValue(Grid.RowProperty, _grid.RowDefinitions.Count-1);
 
         var histEntry = new Editor()
         {
-            Text = _prompt.Text.Trim( new char[] { ' ', '\n', '\r' }),
+            Text = promptText,
             IsTextPredictionEnabled = false,
             IsSpellCheckEnabled = true,
             IsReadOnly = true,
