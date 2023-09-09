@@ -1,7 +1,8 @@
+using Microsoft.Maui.Controls.PlatformConfiguration;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 
 namespace ap2.Native;
 
@@ -239,5 +240,20 @@ public static class NativeMethods
         return parentProcess.MainWindowHandle;
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
     }
+
+    #if WINDOWS
+
+    public static Windows.Graphics.RectInt32 ToRectInt32(this Rectangle rect)
+    {
+        var rectInt32 = new Windows.Graphics.RectInt32();
+        rectInt32.X = rect.X;
+        rectInt32.Y = rect.Y;
+        rectInt32.Width = rect.Width;
+        rectInt32.Height = rect.Height;
+
+        return rectInt32;
+    }
+
+    #endif
 }
 

@@ -14,6 +14,13 @@ namespace ap2;
 
 public static class MauiProgram
 {
+    public static double DpiX { get; private set; } = 96.0;
+    public static double DpiY { get; private set; } = 96.0;
+
+    public static double ScaleX(double value) => value * DpiX / 96.0;
+
+    public static double ScaleY(double value) => value * DpiY / 96.0;
+
 #if DISABLE_XAML_GENERATED_MAIN
     [DllImport("Microsoft.ui.xaml.dll")]
     private static extern void XamlCheckProcessRequirements();
@@ -61,11 +68,11 @@ public static class MauiProgram
                             var monitor = NativeMethods.MonitorFromPoint(new NativeMethods.POINT() 
                                 { X = _openPosition.X, Y = _openPosition.Y }, NativeMethods.MonitorFromPointFlags.MONITOR_DEFAULTTONEAREST);
                             ap2.Native.Shell.GetDpiForMonitor(monitor, ap2.Native.Shell.MONITOR_DPI_TYPE.EFFECTIVE_DPI, out uint dpiX, out uint dpiY);
-                            int scaledWidth = (int)(DefaultWidth * dpiX / 96.0);
-                            int scaledHeight = (int)(DefaultHeight * dpiY / 96.0);
+                            DpiX = dpiX;
+                            DpiY = dpiY;
                             _openPosition = new Windows.Graphics.RectInt32(
-                                (short)wParam - scaledWidth, (short)((uint)wParam >> 16) - scaledHeight, 
-                                scaledWidth, scaledHeight);
+                                (int)((short)wParam - ScaleX(DefaultWidth)), (int)((short)((uint)wParam >> 16) - ScaleY(DefaultHeight)), 
+                                (int)ScaleX(DefaultWidth), (int)ScaleY(DefaultHeight));
                             
                             var monitorInfo = new NativeMethods.MONITORINFOEX();
                             NativeMethods.GetMonitorInfo(new HandleRef(null, monitor), monitorInfo);
@@ -89,7 +96,6 @@ public static class MauiProgram
                             {
                                 window.Activate();
                             }
-                            //_app.MainWindow.Activate();
                         }
                         break;
                     case WindowsMessage.WM_CONTEXTMENU:
@@ -132,7 +138,7 @@ public static class MauiProgram
             {
                 windowsLifecycleBuilder.OnWindowCreated(window =>
                 {
-                    //window.ExtendsContentIntoTitleBar = false;
+                    //window.ExtendsContentIntoTitleBar = true;
                     var handle = WinRT.Interop.WindowNative.GetWindowHandle(window);
 
                     var extendedStyle = Native.NativeMethods.GetWindowLong(handle, Native.NativeMethods.GWL_STYLE);
@@ -146,8 +152,14 @@ public static class MauiProgram
                         case Microsoft.UI.Windowing.OverlappedPresenter overlappedPresenter:
                             //overlappedPresenter.SetBorderAndTitleBar(false, false);
                             appWindow.MoveAndResize(_openPosition);
+                            appWindow.TitleBar.IconShowOptions = Microsoft.UI.Windowing.IconShowOptions.ShowIconAndSystemMenu;
+                            appWindow.TitleBar.ExtendsContentIntoTitleBar = false;
                             break;
                     }
+                    var hInstance = NativeMethods.GetModuleHandle();
+                    var hIcon = NativeMethods.LoadIcon(hInstance, new IntPtr(ap2.Native.Shell.IDI_APPLICATION));
+                    var iconId = Microsoft.UI.Win32Interop.GetIconIdFromIcon(hIcon);
+                    window.AppWindow.SetIcon(iconId);
                     appWindow.Closing += (window, args) =>
                     {
                         window.Hide();
