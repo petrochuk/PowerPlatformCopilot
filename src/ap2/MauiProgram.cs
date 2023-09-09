@@ -1,9 +1,14 @@
 ﻿using ap2.Native;
+using AP2.DataverseAzureAI;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.LifecycleEvents;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Maui.Hosting;
+using Microsoft.Extensions.Hosting;
 
 namespace ap2;
 
@@ -22,6 +27,11 @@ public static class MauiProgram
     {
         XamlCheckProcessRequirements();
         global::WinRT.ComWrappersSupport.InitializeComWrappers();
+
+        InitializeApp(args);
+
+        using var client = Host.Services.GetRequiredService<DataverseAIClient>();
+        client.Run();
 
         var nativeWindow = new NativeWindow(Assembly.GetExecutingAssembly().GetName().Name, NotificationWndProc);
         ap2.Native.Shell.AddNotifyIcon("ProDev Copilot", _iconId, nativeWindow.Handle);
@@ -102,7 +112,9 @@ public static class MauiProgram
 
     public static MauiApp CreateMauiApp()
     {
+        var configuration = LoadConfiguration();
         var builder = MauiApp.CreateBuilder();
+
         builder
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
@@ -110,6 +122,7 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
+        builder.Services.AddSingleton<DataverseAIClient>();
 
 #if WINDOWS
         builder.ConfigureLifecycleEvents(events =>
@@ -147,6 +160,57 @@ public static class MauiProgram
 
 #if DEBUG
         builder.Logging.AddDebug();
+#endif
+        builder.Services.AddDataverseAIClient(configuration);
+
+        return builder.Build();
+    }
+
+    public static IHost Host { get; private set; }
+
+    private static void InitializeApp(string[] args)
+    {
+        var configuration = LoadConfiguration();
+        Host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder(args)
+            .ConfigureAppConfiguration(builder =>
+            {
+                builder.Sources.Clear();
+                builder.AddConfiguration(configuration);
+            })
+            .ConfigureLogging((builder, loggingBuilder) =>
+            {
+                loggingBuilder.ClearProviders();
+            })
+            .ConfigureServices(ConfigureServices)
+            .Build();
+    }
+
+    private static void ConfigureServices(HostBuilderContext hostContext, IServiceCollection services)
+    {
+        services.AddDataverseAIClient(hostContext.Configuration);
+    }
+
+    private static IConfiguration LoadConfiguration()
+    {
+        var userAppSettings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), DataverseAIClient.LocalAppDataFolderName, "appSettings.json");
+        if (!File.Exists(userAppSettings))
+        {
+            if (!Directory.Exists(Path.GetDirectoryName(userAppSettings)))
+                Directory.CreateDirectory(Path.GetDirectoryName(userAppSettings)!);
+
+            var httpClient = new HttpClient();
+            var responseStream = httpClient.GetStreamAsync("https://ap2public.blob.core.windows.net/oaipublic/appSettings.json").Result;
+            using var fileStream = new FileStream(userAppSettings, FileMode.Create);
+            responseStream.CopyTo(fileStream);
+        }
+
+        var builder = new ConfigurationBuilder()
+            .SetBasePath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!)
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile(userAppSettings, optional: true, reloadOnChange: true);
+
+#if DEBUG
+        builder.AddJsonFile("appsettings.Debug.json", optional: true, reloadOnChange: true);
 #endif
 
         return builder.Build();
