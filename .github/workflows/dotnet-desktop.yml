@@ -48,8 +48,8 @@ jobs:
     - name: Build
       run: dotnet build --no-restore $env:Solution_Name -c ${{ matrix.configuration }}
 
-    - name: Publish
-      run: dotnet publish $env:Solution_Name -c ${{ matrix.configuration }}
+    - name: Publish for Windows
+      run: dotnet publish $env:Solution_Name -c ${{ matrix.configuration }} -f net8.0-windows10.0.19041.0
 
     - name: Upload DataverseAzureAI Artifacts
       uses: actions/upload-artifact@v3

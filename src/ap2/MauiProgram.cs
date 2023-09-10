@@ -25,13 +25,14 @@ public static class MauiProgram
 
     private static NativeWindow _trayWindow;
 
+    const double DefaultWidth = 350;
+    const double DefaultHeight = 150;
+
 #if DISABLE_XAML_GENERATED_MAIN
     [DllImport("Microsoft.ui.xaml.dll")]
     private static extern void XamlCheckProcessRequirements();
 
     static readonly Guid _iconId = new Guid("1eb514a6-f95e-45fd-83b7-007af0791d6d");
-    const double DefaultWidth = 300;
-    const double DefaultHeight = 150;
 
     [STAThread]
     public static void Main(string[] args)
