@@ -23,6 +23,8 @@ public static class MauiProgram
 
     private static IntPtr _mainWindowProc;
 
+    private static NativeWindow _trayWindow;
+
 #if DISABLE_XAML_GENERATED_MAIN
     [DllImport("Microsoft.ui.xaml.dll")]
     private static extern void XamlCheckProcessRequirements();
@@ -42,11 +44,11 @@ public static class MauiProgram
         using var client = Host.Services.GetRequiredService<DataverseAIClient>();
         client.Run();
 
-        var nativeWindow = new NativeWindow(Assembly.GetExecutingAssembly().GetName().Name, NotificationWndProc);
-        ap2.Native.Shell.AddNotifyIcon("ProDev Copilot", _iconId, nativeWindow.Handle);
+        _trayWindow = new NativeWindow(Assembly.GetExecutingAssembly().GetName().Name, NotificationWndProc);
+        ap2.Native.Shell.AddNotifyIcon("ProDev Copilot", _iconId, _trayWindow.Handle);
 
         NativeMethods.MSG msg;
-        while (NativeMethods.GetMessage(out msg, nativeWindow.Handle, 0, 0) > 0)
+        while (NativeMethods.GetMessage(out msg, 0, 0, 0) > 0)
         {
             NativeMethods.TranslateMessage(ref msg);
             NativeMethods.DispatchMessage(ref msg);
@@ -58,7 +60,7 @@ public static class MauiProgram
 
     private static IntPtr MainWndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
-        Debug.WriteLine($"NotificationWndProc: {(WindowsMessage)msg}");
+        //Debug.WriteLine($"NotificationWndProc: {(WindowsMessage)msg}");
 
         return NativeMethods.CallWindowProc(_mainWindowProc, hWnd, msg, wParam, lParam);
     }
@@ -92,11 +94,12 @@ public static class MauiProgram
                             if (verticalAdjustment < 0)
                                 _openPosition.Y += verticalAdjustment;
 
-                            global::Microsoft.UI.Xaml.Application.Start((p) => {
+                            global::Microsoft.UI.Xaml.Application.Start(async (p) => {
                                 var context = new global::Microsoft.UI.Dispatching.DispatcherQueueSynchronizationContext(global::Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
                                 SynchronizationContext.SetSynchronizationContext(context);
                                 _app = new WinUI.App();
                             });
+                            NativeWindow.PostQuitMessage(0);
                         }
                         else 
                         {
@@ -114,17 +117,16 @@ public static class MauiProgram
                             }
                         }
                         break;
-                    case WindowsMessage.WM_CONTEXTMENU:
-                        break;
-                    case WindowsMessage.WM_DPICHANGED:
-                        break;
                     default:
                         //Debug.WriteLine($"NotificationWndProc: {iconMessage}");
                         break;
                 }
                 break;
+                case (uint)WindowsMessage.WM_DESTROY:
+                    Debug.WriteLine($"WindowsMessage.WM_DESTROY");
+                    return 0;
                 default:
-                    //Debug.WriteLine($"NotificationWndProc: {msg}");
+                    Debug.WriteLine($"NotificationWndProc: {(WindowsMessage)msg}");
                     break;
         }
 
@@ -150,7 +152,6 @@ public static class MauiProgram
 
         builder.ConfigureLifecycleEvents(events =>
         {
-            // Make sure to add "using Microsoft.Maui.LifecycleEvents;" in the top of the file 
             events.AddWindows(windowsLifecycleBuilder =>
             {
                 windowsLifecycleBuilder.OnWindowCreated(window =>
@@ -210,6 +211,17 @@ public static class MauiProgram
         builder.Services.AddDataverseAIClient(configuration);
 
         return builder.Build();
+    }
+
+    public static void Quit()
+    {
+        _trayWindow?.Dispose();
+        if (Host != null)
+        {
+            Host.StopAsync().Wait();
+            Host.Dispose();
+            Host = null;
+        }
     }
 
     public static IHost Host { get; private set; }

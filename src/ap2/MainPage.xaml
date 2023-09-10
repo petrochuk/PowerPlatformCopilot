@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="ap2.MainPage"
              Loaded="ContentPage_Loaded">
-    <ScrollView x:Name="_scrollView" SizeChanged="ScrollView_SizeChanged">
+    <ScrollView x:Name="_scrollView">
         <Grid Padding="4" RowSpacing="4" ColumnSpacing="4" x:Name="_grid">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />

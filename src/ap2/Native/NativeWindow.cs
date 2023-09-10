@@ -208,9 +208,11 @@ public class NativeWindow : IDisposable
     }
 
     [DllImport("user32.dll", SetLastError = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     static extern UInt16 RegisterClassW([In] ref WNDCLASS lpWndClass);
 
     [DllImport("user32.dll", SetLastError = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     static extern IntPtr CreateWindowExW(
        UInt32 dwExStyle,
        [MarshalAs(UnmanagedType.LPWStr)]
@@ -227,7 +229,12 @@ public class NativeWindow : IDisposable
     );
 
     [DllImport("user32.dll", SetLastError = true)]
-    static extern bool DestroyWindow(IntPtr hWnd);
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    public static extern bool DestroyWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    public static extern void PostQuitMessage(int nExitCode);
 
     private const int ERROR_CLASS_ALREADY_EXISTS = 1410;
 

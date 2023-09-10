@@ -7,4 +7,7 @@
     <FlyoutItem Title="Home" FlyoutIcon="pp_devtools.png">
         <ShellContent ContentTemplate="{DataTemplate local:MainPage}" Route="MainPage" />
     </FlyoutItem>
+    <FlyoutItem Title="Exit" FlyoutIcon="exit_exit.png" >
+        <ShellContent ContentTemplate="{DataTemplate local:ExitPage}" Route="ExitPage" />
+    </FlyoutItem>
 </Shell>

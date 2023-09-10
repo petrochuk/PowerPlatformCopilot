@@ -84,6 +84,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Update="ExitPage.xaml.cs">
+	    <DependentUpon>ExitPage.xaml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <MauiXaml Update="ExitPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	</ItemGroup>
+
+	<ItemGroup>
 	  <None Update="appSettings.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
