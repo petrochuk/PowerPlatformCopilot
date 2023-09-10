@@ -42,6 +42,9 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore $env:Solution_Name
 
+    - name: Restore dependencies
+      run: dotnet workload restore $env:Solution_Name
+
     - name: Build
       run: dotnet build --no-restore $env:Solution_Name -c ${{ matrix.configuration }}
 
