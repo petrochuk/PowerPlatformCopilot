@@ -13,8 +13,8 @@ public static class DataverseAIClientExtensions
     {
         _ = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
-        services.AddTransient<DataverseAIClient>();
-        services.AddTransient<WamAuthorizationHeaderHandler>();
+        services.AddSingleton<DataverseAIClient>();
+        services.AddSingleton<WamAuthorizationHeaderHandler>();
         services.AddHttpClient(nameof(DataverseAIClient), c =>
         {
             c.DefaultRequestVersion = HttpVersion.Version30;

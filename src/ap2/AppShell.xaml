@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="ap2.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" Title="ProDev Copilot"
+    xmlns:local="clr-namespace:ap2" Shell.FlyoutBehavior="Flyout" Shell.NavBarIsVisible="False">
+    <FlyoutItem Title="Home" FlyoutIcon="pp_devtools.png">
+        <ShellContent ContentTemplate="{DataTemplate local:MainPage}" Route="MainPage" />
+    </FlyoutItem>
+    <FlyoutItem Title="Exit" FlyoutIcon="exit_exit.png" >
+        <ShellContent ContentTemplate="{DataTemplate local:ExitPage}" Route="ExitPage" />
+    </FlyoutItem>
+</Shell>
