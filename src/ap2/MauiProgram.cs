@@ -21,6 +21,8 @@ public static class MauiProgram
 
     public static double ScaleY(double value) => value * DpiY / 96.0;
 
+    private static IntPtr _mainWindowProc;
+
 #if DISABLE_XAML_GENERATED_MAIN
     [DllImport("Microsoft.ui.xaml.dll")]
     private static extern void XamlCheckProcessRequirements();
@@ -53,6 +55,13 @@ public static class MauiProgram
 
     static WinUI.App _app;
     static Windows.Graphics.RectInt32 _openPosition;
+
+    private static IntPtr MainWndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+    {
+        Debug.WriteLine($"NotificationWndProc: {(WindowsMessage)msg}");
+
+        return NativeMethods.CallWindowProc(_mainWindowProc, hWnd, msg, wParam, lParam);
+    }
 
     private static IntPtr NotificationWndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
@@ -94,6 +103,13 @@ public static class MauiProgram
                             var window = _app.Application.Windows.First().Handler.PlatformView as global::Microsoft.Maui.MauiWinUIWindow;
                             if (window != null)
                             {
+#if WINDOWS
+                                IntPtr windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(window);
+                                Microsoft.UI.WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(windowHandle);
+                                Microsoft.UI.Windowing.AppWindow appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(windowId);
+                                (appWindow.Presenter as Microsoft.UI.Windowing.OverlappedPresenter).IsAlwaysOnTop = true;
+                                (appWindow.Presenter as Microsoft.UI.Windowing.OverlappedPresenter).IsAlwaysOnTop = false;
+#endif
                                 window.Activate();
                             }
                         }
@@ -131,6 +147,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<DataverseAIClient>();
 
 #if WINDOWS
+
         builder.ConfigureLifecycleEvents(events =>
         {
             // Make sure to add "using Microsoft.Maui.LifecycleEvents;" in the top of the file 
@@ -138,33 +155,50 @@ public static class MauiProgram
             {
                 windowsLifecycleBuilder.OnWindowCreated(window =>
                 {
-                    //window.ExtendsContentIntoTitleBar = true;
+                    window.ExtendsContentIntoTitleBar = false;
                     var handle = WinRT.Interop.WindowNative.GetWindowHandle(window);
-
-                    var extendedStyle = Native.NativeMethods.GetWindowLong(handle, Native.NativeMethods.GWL_STYLE);
-                    extendedStyle |= (int)Native.NativeWindow.ExtendedWindowStyles.WS_EX_TOOLWINDOW;
-                    Native.NativeMethods.SetWindowLong(handle, Native.NativeMethods.GWL_STYLE, extendedStyle);
 
                     var id = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(handle);
                     var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id);
                     switch (appWindow.Presenter)
                     {
                         case Microsoft.UI.Windowing.OverlappedPresenter overlappedPresenter:
-                            //overlappedPresenter.SetBorderAndTitleBar(false, false);
                             appWindow.MoveAndResize(_openPosition);
                             appWindow.TitleBar.IconShowOptions = Microsoft.UI.Windowing.IconShowOptions.ShowIconAndSystemMenu;
-                            appWindow.TitleBar.ExtendsContentIntoTitleBar = false;
+                            appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
+                            overlappedPresenter.IsResizable = true;
+                            overlappedPresenter.IsMaximizable = true;
+                            overlappedPresenter.IsMinimizable = true;
+                            overlappedPresenter.SetBorderAndTitleBar(true, true);
                             break;
                     }
-                    var hInstance = NativeMethods.GetModuleHandle();
-                    var hIcon = NativeMethods.LoadIcon(hInstance, new IntPtr(ap2.Native.Shell.IDI_APPLICATION));
-                    var iconId = Microsoft.UI.Win32Interop.GetIconIdFromIcon(hIcon);
-                    window.AppWindow.SetIcon(iconId);
+
+                    _mainWindowProc = Native.NativeMethods.GetWindowLongPtr(handle, Native.NativeMethods.GWLP_WNDPROC);
+                    Native.NativeMethods.SetWindowLongPtr(handle, Native.NativeMethods.GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate<Native.NativeWindow.WndProc>(MainWndProc));
+
+                    var extendedStyle = Native.NativeMethods.GetWindowLong(handle, Native.NativeMethods.GWL_EXSTYLE);
+                    extendedStyle |= (int)Native.NativeWindow.ExtendedWindowStyles.WS_EX_TOOLWINDOW;
+                    Native.NativeMethods.SetWindowLong(handle, Native.NativeMethods.GWL_EXSTYLE, extendedStyle);
+
+                    var normalStyle = Native.NativeMethods.GetWindowLong(handle, Native.NativeMethods.GWL_STYLE);
+                    normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_OVERLAPPEDWINDOW;
+                    //normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_SYSMENU;
+                    //normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_THICKFRAME;
+                    //normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_MINIMIZE;
+                    //normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_MAXIMIZEBOX;
+                    //normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_MAXIMIZE;
+                    //normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_MINIMIZEBOX;
+                    Native.NativeMethods.SetWindowLong(handle, Native.NativeMethods.GWL_STYLE, normalStyle);
+
                     appWindow.Closing += (window, args) =>
                     {
                         window.Hide();
                         args.Cancel = true;
                     };
+                    var hInstance = NativeMethods.GetModuleHandle();
+                    var hIcon = NativeMethods.LoadIcon(hInstance, new IntPtr(ap2.Native.Shell.IDI_APPLICATION));
+                    var iconId = Microsoft.UI.Win32Interop.GetIconIdFromIcon(hIcon);
+                    window.AppWindow.SetIcon(iconId);
                 });
             });
         });
