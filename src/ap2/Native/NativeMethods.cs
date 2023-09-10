@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace ap2.Native;
 
@@ -113,9 +114,13 @@ public static class NativeMethods
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     public static extern IntPtr MonitorFromPoint(POINT pt, NativeMethods.MonitorFromPointFlags flags);
 
+    [DllImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    public static extern IntPtr MonitorFromWindow(IntPtr hwnd, NativeMethods.MonitorFromPointFlags flags);
+
     [DllImport("user32.dll", EntryPoint = "GetMonitorInfoW")]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    public static extern bool GetMonitorInfo(HandleRef hmonitor, [In, Out] MONITORINFOEX info);
+    public static extern bool GetMonitorInfo(IntPtr hMonitor, [In, Out] MONITORINFOEX info);
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]

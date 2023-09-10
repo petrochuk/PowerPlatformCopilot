@@ -84,7 +84,7 @@ public static class MauiProgram
                                 (int)ScaleX(DefaultWidth), (int)ScaleY(DefaultHeight));
                             
                             var monitorInfo = new NativeMethods.MONITORINFOEX();
-                            NativeMethods.GetMonitorInfo(new HandleRef(null, monitor), monitorInfo);
+                            NativeMethods.GetMonitorInfo(monitor, monitorInfo);
                             var horizontalAdjustment = monitorInfo.rcWork.Width - (_openPosition.X + _openPosition.Width);
                             if (horizontalAdjustment > 0)
                                 _openPosition.X += horizontalAdjustment;
