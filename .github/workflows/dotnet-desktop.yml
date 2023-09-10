@@ -46,7 +46,7 @@ jobs:
       run: dotnet restore $env:Solution_Name
 
     - name: Build
-      run: dotnet build --no-restore $env:Solution_Name -c ${{ matrix.configuration }}
+      run: dotnet build --no-restore $env:Solution_Name -c ${{ matrix.configuration }} -f net8.0-windows10.0.19041.0
 
     - name: Publish for Windows
       run: dotnet publish $env:Solution_Name -c ${{ matrix.configuration }} -f net8.0-windows10.0.19041.0
