@@ -182,7 +182,7 @@ public static class MauiProgram
 
                     var normalStyle = Native.NativeMethods.GetWindowLong(handle, Native.NativeMethods.GWL_STYLE);
                     normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_OVERLAPPEDWINDOW;
-                    //normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_SYSMENU;
+                    normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_SYSMENU;
                     //normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_THICKFRAME;
                     //normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_MINIMIZE;
                     //normalStyle |= (int)Native.NativeWindow.WindowStyles.WS_MAXIMIZEBOX;
