@@ -55,12 +55,19 @@ jobs:
       uses: actions/upload-artifact@v3
       with: 
         name: DataverseAzureAI
-        path: src/DataverseAzureAI/bin/${{ matrix.configuration }}/net8.0-windows10.0.19041.0/win10-x64/publish
+        path: src/DataverseAzureAI/bin/${{ matrix.configuration }}/net8.0-windows10.0.19041.0/publish
         if-no-files-found: error
 
     - name: Upload ConsoleTestApp Artifacts
       uses: actions/upload-artifact@v3
       with: 
         name: ConsoleTestApp
-        path: src/ConsoleTestApp/bin/${{ matrix.configuration }}/net8.0-windows10.0.19041.0/win10-x64/publish
+        path: src/ConsoleTestApp/bin/${{ matrix.configuration }}/net8.0-windows10.0.19041.0/publish
+        if-no-files-found: error
+
+    - name: Upload ap2 Artifacts
+      uses: actions/upload-artifact@v3
+      with: 
+        name: ConsoleTestApp
+        path: src/ap2/bin/${{ matrix.configuration }}/net8.0-windows10.0.19041.0/win10-x64/publish
         if-no-files-found: error
