@@ -74,6 +74,6 @@ public class BusinessUnit
     public object address1_longitude { get; set; }
     public DateTime createdon { get; set; }
     public object address2_line2 { get; set; }
-    public int versionnumber { get; set; }
+    public long versionnumber { get; set; }
     public object disabledreason { get; set; }
 }

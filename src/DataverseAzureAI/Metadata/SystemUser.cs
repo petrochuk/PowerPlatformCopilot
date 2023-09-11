@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json.Serialization;
 
 namespace AP2.DataverseAzureAI.Metadata;
 
@@ -122,7 +123,9 @@ public class SystemUser
     public int? preferredaddresscode { get; set; }
     public object address2_composite { get; set; }
     public int? preferredemailcode { get; set; }
-    public string domainname { get; set; }
+
+    [JsonPropertyName("domainname")]
+    public string DomainName { get; set; }
     public string title { get; set; }
     public object address2_telephone3 { get; set; }
     public object address2_telephone2 { get; set; }

@@ -651,7 +651,72 @@ public partial class DataverseAIClient
 
     #endregion
 
-    #region Update permissions
+    #region Roles / Permissions
+    
+    [Description("List of members with particular role")]
+    public async Task<string> ListOfRoleMembers(
+        [Description("Power Platform environment")]
+        string environment,
+        [Required, Description("Role name")]
+        string roleName,
+        [Description("Optional business unit the role belongs to")]
+        string businessUnit,
+        [Required, Description("Person's first name, or last name, or full name, or a email")]
+        string personName)
+    {
+        if (!EnsureSelectedEnvironment(environment, out var errorResponse))
+            return errorResponse;
+
+        if (string.IsNullOrWhiteSpace(roleName))
+            return "Role name is required. Ask for role name.";
+
+        // Send async requests in parallel
+        var person = FindPersonViaGraph(personName);
+        var roles = SelectedEnvironment!.Roles.Value;
+
+        await Task.WhenAll(person, roles);
+        if (person.Result == null)
+            return $"Unable to find {personName}";
+
+        if (person.Result == null && !string.IsNullOrWhiteSpace(personName))
+            return $"Unable to find {personName}";
+
+        if (string.IsNullOrWhiteSpace(businessUnit))
+            businessUnit = SelectedEnvironment.Properties.LinkedEnvironmentMetadata.domainName;
+
+        var role = roles.Result.FirstOrDefault(r => 
+            string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(r.BusinessUnit.Name, businessUnit, StringComparison.OrdinalIgnoreCase));
+        if (role == null)
+        {
+            role = roles.Result.FirstOrDefault(r => 
+                r.Name.Contains(roleName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(r.BusinessUnit.Name, businessUnit, StringComparison.OrdinalIgnoreCase));
+            if (role == null)
+                return $"Unable to find role {roleName} in {SelectedEnvironment.Properties.DisplayName}";
+        }
+
+        if (role.SystemUsers == null)
+        {
+            role.SystemUsers = await LoadRoleUsers(role.RoleId);
+        }
+
+        // First pass, match by domainname (email)
+        foreach (var systemUser in role.SystemUsers)
+        {
+            if (string.Equals(systemUser.DomainName, person.Result.UserPrincipalName, StringComparison.OrdinalIgnoreCase))
+                return $"{person.Result.DisplayName} is a member of {role.BusinessUnit.Name}/{role.Name} role";
+        }
+
+        // Second pass, match by fullname
+        foreach (var systemUser in role.SystemUsers)
+        {
+            if (string.Equals(systemUser.FullName, person.Result.DisplayName, StringComparison.OrdinalIgnoreCase))
+                return $"{person.Result.DisplayName} is a member of {role.BusinessUnit.Name}/{role.Name} role";
+        }
+
+        return $"{person.Result.DisplayName} is not a member of {role.BusinessUnit.Name}/{role.Name} role";
+    }
 
     [Description("Updates user permission inside Power Platform")]
     public async Task<string> UpdateUserPermission(
@@ -677,7 +742,7 @@ public partial class DataverseAIClient
 
         // Send async requests in parallel
         var person = FindPersonViaGraph(personName);
-        var roles = SelectedEnvironment.Roles.Value;
+        var roles = SelectedEnvironment!.Roles.Value;
 
         await Task.WhenAll(person, roles);
         if (person.Result == null)

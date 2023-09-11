@@ -498,6 +498,22 @@ public partial class DataverseAIClient : IDisposable
         return solutionComponents;
     }
 
+    public async Task<List<SystemUser>> LoadRoleUsers(Guid roleId)
+    {
+        var query = $"roles({roleId})?$expand=businessunitid($select=name),systemuserroles_association($select=fullname,domainname,systemuserid),teamroles_association($select=teamid,name,teamtype)";
+        var uri = BuildOrgQueryUri(query);
+        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+        var response = await httpClient.GetAsync(uri);
+        response.EnsureSuccessStatusCode();
+        var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+
+        var usersData = JsonSerializer.Deserialize<Role>(contentStream, JsonSerializerOptions);
+        if (usersData == null)
+            throw new InvalidOperationException("Failed to get list of role users.");
+
+        return usersData.SystemUsers;
+    }
+
     public async Task<Person?> FindPersonViaGraph(string personName)
     {
         if (string.IsNullOrWhiteSpace(personName))

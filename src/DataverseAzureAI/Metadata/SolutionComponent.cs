@@ -18,7 +18,7 @@ public class SolutionComponent
     public Guid SolutionComponentId { get; set; }
     public SolutionComponentType? ComponentType { get; set; }
     public int? RootComponentBehavior { get; set; }
-    public int VersionNumber { get; set; }
+    public long VersionNumber { get; set; }
     public bool IsMetadata { get; set; }
     public string _solutionid_value { get; set; }
     public string _createdonbehalfby_value { get; set; }

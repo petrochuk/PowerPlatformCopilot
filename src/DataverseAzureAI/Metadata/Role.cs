@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel;
+using System.Diagnostics;
+using System.Reflection;
 using System.Text.Json.Serialization;
 
 namespace AP2.DataverseAzureAI.Metadata;
@@ -30,6 +32,10 @@ public class Role
     public string _createdby_value { get; set; }
     public BooleanValue CanBeDeleted { get; set; }
     public BooleanValue IsCustomizable { get; set; }
+
     [JsonPropertyName("businessunitid")]
     public BusinessUnit BusinessUnit { get; set; }
+
+    [JsonPropertyName("systemuserroles_association")]
+    public List<SystemUser> SystemUsers { get; set; }
 }
