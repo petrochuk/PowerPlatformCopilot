@@ -95,7 +95,7 @@ public static class MauiProgram
                             if (verticalAdjustment < 0)
                                 _openPosition.Y += verticalAdjustment;
 
-                            global::Microsoft.UI.Xaml.Application.Start(async (p) => {
+                            global::Microsoft.UI.Xaml.Application.Start((p) => {
                                 var context = new global::Microsoft.UI.Dispatching.DispatcherQueueSynchronizationContext(global::Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
                                 SynchronizationContext.SetSynchronizationContext(context);
                                 _app = new WinUI.App();

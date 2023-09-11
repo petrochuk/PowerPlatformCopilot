@@ -92,12 +92,15 @@ public partial class MainPage : ContentPage
 
         try
         {
-            await AddResponse(await response, rect).ConfigureAwait(true);
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await AddResponse(await response, rect);
+            });
         }
         catch (Azure.RequestFailedException ex)
         {
             var errors = ex.Message.Split("Status:");
-            await AddResponse(errors[0], rect).ConfigureAwait(true);
+            await AddResponse(errors[0], rect);
         }
     }
 
@@ -146,7 +149,7 @@ public partial class MainPage : ContentPage
 
         (_scrollView as IView).InvalidateArrange();
         await Task.Delay(100).ConfigureAwait(true);
-        await _scrollView.ScrollToAsync(_prompt, ScrollToPosition.End, true).ConfigureAwait(true);
+        await _scrollView.ScrollToAsync(_prompt, ScrollToPosition.End, true).ConfigureAwait(true);            
     }
 
     private HtmlWebViewSource ResponseToHtml(string response)
