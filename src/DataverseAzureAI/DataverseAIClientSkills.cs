@@ -718,7 +718,7 @@ public partial class DataverseAIClient
         return $"{person.Result.DisplayName} is not a member of {role.BusinessUnit.Name}/{role.Name} role";
     }
 
-    [Description("Updates user permission inside Power Platform")]
+    [Description("Updates user roles inside Power Platform")]
     public async Task<string> UpdateUserPermission(
         [Description("Power Platform environment")]
         string environment,

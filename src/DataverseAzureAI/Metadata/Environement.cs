@@ -131,7 +131,7 @@ public class Environment
         if (systemUser != null)
             return systemUser;
 
-        var queryUri = BuildOrgQueryUri($"systemusers?$filter=windowsliveid eq '{internalEmailAddress}'");
+        var queryUri = BuildOrgQueryUri($"systemusers?$filter=domainname eq '{internalEmailAddress}'");
 
         using var request = new HttpRequestMessage(HttpMethod.Get, queryUri);
         var httpClient = HttpClientFactory!.CreateClient(nameof(DataverseAIClient));

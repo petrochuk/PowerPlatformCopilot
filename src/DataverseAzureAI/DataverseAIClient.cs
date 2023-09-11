@@ -534,32 +534,56 @@ public partial class DataverseAIClient : IDisposable
         if (people == null || people.Value == null || people.Value.Count <= 0)
             return null;
 
-        // Exact match on person name
-        foreach (var person in people.Value)
+        if (TryFindPerson(people, personName, out var person))
+            return person;
+
+        people = await _graphClient.Value.Me.People.GetAsync((c) =>
         {
-            if (string.Compare(person.DisplayName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
-                string.Compare(person.GivenName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
-                string.Compare(person.Surname, personName, StringComparison.OrdinalIgnoreCase) == 0)
+            c.QueryParameters.Search = $"\"{personName}\"";
+        }).ConfigureAwait(false);
+        if (people == null || people.Value == null || people.Value.Count <= 0)
+            return null;
+
+        if (TryFindPerson(people, personName, out person))
+            return person;
+
+        return null;
+    }
+
+    private bool TryFindPerson(PersonCollectionResponse personCollection, string personName, out Person? person)
+    {
+        person = null;
+        if (personCollection == null || personCollection.Value == null)
+            return false;
+
+        // Exact match on person name
+        foreach (var candidate in personCollection.Value)
+        {
+            if (string.Compare(candidate.DisplayName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
+                string.Compare(candidate.GivenName, personName, StringComparison.OrdinalIgnoreCase) == 0 ||
+                string.Compare(candidate.Surname, personName, StringComparison.OrdinalIgnoreCase) == 0)
             {
-                return person;
+                person = candidate;
+                return true;
             }
         }
 
         var personNameParts = personName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         foreach (var personNamePart in personNameParts) 
         { 
-            foreach (var person in people.Value)
+            foreach (var candidate in personCollection.Value)
             {
-                if (string.Compare(person.DisplayName, personNamePart, StringComparison.OrdinalIgnoreCase) == 0 ||
-                    string.Compare(person.GivenName, personNamePart, StringComparison.OrdinalIgnoreCase) == 0 ||
-                    string.Compare(person.Surname, personNamePart, StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Compare(candidate.DisplayName, personNamePart, StringComparison.OrdinalIgnoreCase) == 0 ||
+                    string.Compare(candidate.GivenName, personNamePart, StringComparison.OrdinalIgnoreCase) == 0 ||
+                    string.Compare(candidate.Surname, personNamePart, StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    return person;
+                    person = candidate;
+                    return true;
                 }
             }
         }
 
-        return null;
+        return false;
     }
 
     public bool ConfirmAction(string action)
