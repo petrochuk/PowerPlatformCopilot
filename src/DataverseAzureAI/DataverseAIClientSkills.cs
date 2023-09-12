@@ -267,6 +267,40 @@ public partial class DataverseAIClient
 
     #region Assistant skill functions for Dataverse Solutions
 
+    [Description("Takes in query text as a parameter and converts it to SQL query and executes the SQL query on Dataverse and sends the result back. It knows about systemuser, teams and roles. It can convert any natural language query to SQL query and return result of that SQL query.")]
+    public async Task<string?> NaturalLanguageToSqlQuery(
+        [Description("Power Platform environment")]
+        string environment,
+        [Description("Natural language query text which will be converted to SQL query and executed.")]
+        string queryText)
+    {
+        if (!EnsureSelectedEnvironment(environment, out var response))
+            return response;
+
+        var copilotResponse = await CallDataverseCopilot(queryText).ConfigureAwait(false);
+        if (copilotResponse == null || copilotResponse.QueryResult == null)
+            return "Unable to convert natural language query to SQL query. Please try again with different text.";
+
+        if (copilotResponse.QueryResult.Results == null || copilotResponse.QueryResult.Results.Count == 0)
+            return "No results found.";
+
+        var responseText = new StringBuilder();
+        foreach (var result in copilotResponse.QueryResult.Results)
+        {
+            if (result.RecordLinks != null && result.RecordLinks.Count > 0)
+            {
+                responseText.Append($"<a href='{result.RecordLinks[0]}'>{result.name}</a>");
+            }
+            else
+            {
+                responseText.Append($"{result.name}");
+            }
+            responseText.AppendLine(",");
+        }
+
+        return responseText.ToString();
+    }
+    
     [Description("Returns all solutions or filtered list of installed/imported based on specified property value and optional user")]
     public async Task<string> ListOSolutionsByPropertyValue(
         [Description("Power Platform environment")]
@@ -408,7 +442,7 @@ public partial class DataverseAIClient
             if (!ConfirmAction($"Do you want to add {canvasApp.Properties.DisplayName} to '{selectedSolution.FriendlyName}'?"))
                 return UserDeclinedAction;
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgQueryUri($"AddSolutionComponent"));
+            using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgDataQueryUri($"AddSolutionComponent"));
             var addSolutionComponent = new AddSolutionComponent
             {
                 ComponentId = canvasApp.Name,
@@ -489,7 +523,7 @@ public partial class DataverseAIClient
                     return UserDeclinedAction;
 
                 var exportSolution = new ExportSolution() { SolutionName = solution.UniqueName };
-                using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgQueryUri($"ExportSolution"));
+                using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgDataQueryUri($"ExportSolution"));
                 request.Content = new StringContent(JsonSerializer.Serialize(exportSolution, JsonSerializerOptions), Encoding.UTF8, "application/json");
                 var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
                 var httpResponse = await httpClient.SendAsync(request).ConfigureAwait(false);
@@ -635,7 +669,7 @@ public partial class DataverseAIClient
             if (!ConfirmAction($"Do you want to create {itemType} named '{itemName}'?"))
                 return UserDeclinedAction;
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgQueryUri($"solutions"));
+            using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgDataQueryUri($"solutions"));
             var solutionCreate = new SolutionCreate() { FriendlyName = itemName, UniqueName = itemName.Replace(" ", "") };
             request.Content = new StringContent(JsonSerializer.Serialize(solutionCreate, JsonSerializerOptions), Encoding.UTF8, "application/json");
             var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
@@ -776,8 +810,8 @@ public partial class DataverseAIClient
         if (!ConfirmAction($"Do you want to grant '{role.BusinessUnit.Name}/{role.Name}' role to {systemUser.FullName}?"))
             return UserDeclinedAction;
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgQueryUri($"systemusers({systemUser.SystemUserId})/systemuserroles_association/$ref"));
-        request.Content = new StringContent($"{{\"@odata.id\":\"{BuildOrgQueryUri($"roles({role.RoleId})")}\"}}", Encoding.UTF8, "application/json");
+        using var request = new HttpRequestMessage(HttpMethod.Post, BuildOrgDataQueryUri($"systemusers({systemUser.SystemUserId})/systemuserroles_association/$ref"));
+        request.Content = new StringContent($"{{\"@odata.id\":\"{BuildOrgDataQueryUri($"roles({role.RoleId})")}\"}}", Encoding.UTF8, "application/json");
         var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
         var response = await httpClient.SendAsync(request).ConfigureAwait(false);
         var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
