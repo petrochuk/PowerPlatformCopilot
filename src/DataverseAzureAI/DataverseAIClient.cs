@@ -139,7 +139,7 @@ public partial class DataverseAIClient : IDisposable
         PowerPlatformEnvironmentApiPrefix = PowerPlatformEnvironmentApiPrefix.Insert(PowerPlatformEnvironmentApiPrefix.Length - 2, ".");
 
         // Get Dataverse Environment Metadata
-        using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"EntityDefinitions"));
+        using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgDataQueryUri($"EntityDefinitions"));
         var response = await httpClient.SendAsync(request).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -447,11 +447,19 @@ public partial class DataverseAIClient : IDisposable
     }
 
     [DebuggerStepThrough]
-    private Uri BuildOrgQueryUri(string query)
+    private Uri BuildOrgDataQueryUri(string query)
     {
         _ = SelectedEnvironment ?? throw new InvalidOperationException("No environment selected");
 
         return new Uri(SelectedEnvironment.Properties.LinkedEnvironmentMetadata.InstanceApiUrl, $"api/data/v9.2/{query}");
+    }
+
+    [DebuggerStepThrough]
+    private Uri BuildApiQueryUri(string query)
+    {
+        _ = SelectedEnvironment ?? throw new InvalidOperationException("No environment selected");
+
+        return new Uri(SelectedEnvironment.Properties.LinkedEnvironmentMetadata.InstanceApiUrl, $"api/{query}");
     }
 
     [DebuggerStepThrough]
@@ -472,7 +480,7 @@ public partial class DataverseAIClient : IDisposable
     {
         var solutionComponents = new Dictionary<SolutionComponentType, Dictionary<Guid, SolutionComponent>>();
         var query = $"solutioncomponents?$filter=_solutionid_value eq '{solutionId}'";
-        var uri = BuildOrgQueryUri(query);
+        var uri = BuildOrgDataQueryUri(query);
         var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
         var response = await httpClient.GetAsync(uri);
         response.EnsureSuccessStatusCode();
@@ -501,7 +509,7 @@ public partial class DataverseAIClient : IDisposable
     public async Task<List<SystemUser>> LoadRoleUsers(Guid roleId)
     {
         var query = $"roles({roleId})?$expand=businessunitid($select=name),systemuserroles_association($select=fullname,domainname,systemuserid),teamroles_association($select=teamid,name,teamtype)";
-        var uri = BuildOrgQueryUri(query);
+        var uri = BuildOrgDataQueryUri(query);
         var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
         var response = await httpClient.GetAsync(uri);
         response.EnsureSuccessStatusCode();
@@ -512,6 +520,23 @@ public partial class DataverseAIClient : IDisposable
             throw new InvalidOperationException("Failed to get list of role users.");
 
         return usersData.SystemUsers;
+    }
+
+    public async Task<Nl2SqlResponse> CallDataverseCopilot(string queryText)
+    {
+        var query = $"copilot/v1.0/querystructureddata";
+        var uri = BuildApiQueryUri(query);
+        var text = @$"{{""entityParameters"":[ {{ ""name"":""systemuser"" }}, {{ ""name"":""team"" }}, {{ ""name"":""role"" }}, ], ""queryText"":""{queryText}"", ""options"": [""GenerateResultSummaryAsText""]}}";
+        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+        using var httpContent = new StringContent(text, System.Text.Encoding.UTF8, "application/json");
+        var response = await httpClient.PostAsync(uri, httpContent);
+        response.EnsureSuccessStatusCode();
+        var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        var nl2SqlResponse = JsonSerializer.Deserialize<Nl2SqlResponse>(contentStream, JsonSerializerOptions);
+        if (nl2SqlResponse == null)
+            throw new InvalidOperationException("Failed to get Dataverse Copilot response.");
+
+        return nl2SqlResponse;
     }
 
     public async Task<Person?> FindPersonViaGraph(string personName)
