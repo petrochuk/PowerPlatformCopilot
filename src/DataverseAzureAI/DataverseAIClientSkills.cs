@@ -671,15 +671,17 @@ public partial class DataverseAIClient
             return "Role name is required. Ask for role name.";
 
         // Send async requests in parallel
-        var person = FindPersonViaGraph(personName);
         var roles = SelectedEnvironment!.Roles.Value;
-
-        await Task.WhenAll(person, roles);
-        if (person.Result == null)
-            return $"Unable to find {personName}";
-
-        if (person.Result == null && !string.IsNullOrWhiteSpace(personName))
-            return $"Unable to find {personName}";
+        Task<Person?>? person = null;
+        if (!string.IsNullOrWhiteSpace(personName))
+        {
+            person = FindPersonViaGraph(personName);
+            await Task.WhenAll(person, roles);
+            if (person.Result == null && !string.IsNullOrWhiteSpace(personName))
+                return $"Unable to find {personName}";
+        }
+        else
+            await Task.WhenAll(roles);
 
         if (string.IsNullOrWhiteSpace(businessUnit))
             businessUnit = SelectedEnvironment.Properties.LinkedEnvironmentMetadata.domainName;
@@ -701,21 +703,27 @@ public partial class DataverseAIClient
             role.SystemUsers = await LoadRoleUsers(role.RoleId);
         }
 
-        // First pass, match by domainname (email)
-        foreach (var systemUser in role.SystemUsers)
+        if (person != null && person.Result != null)
         {
-            if (string.Equals(systemUser.DomainName, person.Result.UserPrincipalName, StringComparison.OrdinalIgnoreCase))
-                return $"{person.Result.DisplayName} is a member of {role.BusinessUnit.Name}/{role.Name} role";
+            // First pass, match by domainname (email)
+            foreach (var systemUser in role.SystemUsers)
+            {
+                if (string.Equals(systemUser.DomainName, person.Result.UserPrincipalName, StringComparison.OrdinalIgnoreCase))
+                    return $"{person.Result.DisplayName} is a member of {role.BusinessUnit.Name}/{role.Name} role";
+            }
+
+            // Second pass, match by fullname
+            foreach (var systemUser in role.SystemUsers)
+            {
+                if (string.Equals(systemUser.FullName, person.Result.DisplayName, StringComparison.OrdinalIgnoreCase))
+                    return $"{person.Result.DisplayName} is a member of {role.BusinessUnit.Name}/{role.Name} role";
+            }
+
+            return $"{person.Result.DisplayName} is not a member of {role.BusinessUnit.Name}/{role.Name} role";
         }
 
-        // Second pass, match by fullname
-        foreach (var systemUser in role.SystemUsers)
-        {
-            if (string.Equals(systemUser.FullName, person.Result.DisplayName, StringComparison.OrdinalIgnoreCase))
-                return $"{person.Result.DisplayName} is a member of {role.BusinessUnit.Name}/{role.Name} role";
-        }
-
-        return $"{person.Result.DisplayName} is not a member of {role.BusinessUnit.Name}/{role.Name} role";
+        // Return list of members
+        return $"{role.BusinessUnit.Name}/{role.Name} role has {role.SystemUsers.Count} member(s): {string.Join(", ", role.SystemUsers.Select(u => u.FullName))}";
     }
 
     [Description("Updates user roles inside Power Platform")]
