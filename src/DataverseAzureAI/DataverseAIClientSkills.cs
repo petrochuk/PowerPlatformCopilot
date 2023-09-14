@@ -900,7 +900,7 @@ public partial class DataverseAIClient
         return FunctionCompletedSuccessfully;
     }
 
-    [Description("Returns list of security groups person member of")]
+    [Description("Returns list of Azure Active Directory security groups person member of by calling Microsoft Graph API")]
     public async Task<string> ListSecurityGroups(
         [Required, Description("Person's first name, last name or a email")]
         string personName)
