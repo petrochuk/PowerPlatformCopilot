@@ -4,8 +4,6 @@ using AP2.DataverseAzureAI.Metadata;
 using AP2.DataverseAzureAI.Metadata.Actions;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
-using Microsoft.Graph.Models.Security;
-using Microsoft.OData.Edm;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
@@ -194,6 +192,10 @@ public partial class DataverseAIClient
         var canvasApps = await SelectedEnvironment!.CanvasApps.Value.ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(propertyName))
         {
+            foreach (var canvasApp in canvasApps)
+            {
+                _hyperlinks[canvasApp.Properties.DisplayName] = canvasApp.Properties.AppPlayUri;
+            }
             return $"'{SelectedEnvironment}' has {canvasApps.Count} canvas app(s). DisplayName(s): " + string.Join(", ", canvasApps.Select(x => $"'{x.Properties.DisplayName}'"));
         }
 
@@ -217,6 +219,8 @@ public partial class DataverseAIClient
                     singleResult = canvasApp;
             }
 
+            if (singleResult != null)
+                _hyperlinks[singleResult.Properties.DisplayName] = singleResult.Properties.AppPlayUri;
             return singleResult == null ? PowerAppsNotFound : $"Found this canvas app: '{singleResult.Properties.DisplayName}'";
         }
         else
@@ -225,7 +229,10 @@ public partial class DataverseAIClient
             foreach (var canvasApp in canvasApps)
             {
                 if (propertyInfo.Equals(canvasApp.Properties, propertyValueFilter, _timeProvider))
+                {
+                    _hyperlinks[canvasApp.Properties.DisplayName] = canvasApp.Properties.AppPlayUri;
                     result.Add($"'{canvasApp.Properties.DisplayName}'");
+                }
             }
 
             if (result.Count == 0)

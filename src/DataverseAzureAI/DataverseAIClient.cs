@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.Kiota.Abstractions.Authentication;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http;
@@ -336,6 +337,13 @@ public partial class DataverseAIClient : IDisposable
             }
             _selectedEnvironment = value;
         }
+    }
+
+
+    Dictionary<string, Uri> _hyperlinks = new();
+    public ReadOnlyDictionary<string, Uri> Hyperlinks
+    {
+        get => _hyperlinks.AsReadOnly();
     }
 
     #endregion

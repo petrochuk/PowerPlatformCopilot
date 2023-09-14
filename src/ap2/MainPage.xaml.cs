@@ -3,6 +3,7 @@ using Microsoft.Maui.Controls.PlatformConfiguration;
 using System.Drawing;
 using ap2.Native;
 using System.Text;
+using System.Diagnostics;
 
 namespace ap2;
 
@@ -124,6 +125,15 @@ public partial class MainPage : ContentPage
         {
             Source = ResponseToHtml(response)
         };
+        histWebView.Navigating += (s, e) =>
+        {
+            if (e.Url.StartsWith("https://"))
+            {
+                var filePath = e.Url.Replace("&", "^&");
+                Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
+                e.Cancel = true;
+            }
+        };
 
         histWebView.SetValue(Grid.RowProperty, _grid.RowDefinitions.Count - 2);
         // Add editor first just to measure it
@@ -159,7 +169,11 @@ public partial class MainPage : ContentPage
         var htmlBuilder = new StringBuilder();
         htmlBuilder.Append("<html>");
         htmlBuilder.Append("<head>");
-        htmlBuilder.Append("<style>body { font-family: 'Segoe UI', 'Helvetica Neue', sans-serif; font-size: 14px; }</style>");
+        htmlBuilder.Append("<style>");
+        htmlBuilder.Append("body { font-family: 'Segoe UI', 'Helvetica Neue', sans-serif; font-size: 14px; }");
+        if (Application.Current.RequestedTheme == AppTheme.Dark)
+            htmlBuilder.Append("a:link { color: #8ab4f8; }");
+        htmlBuilder.Append("</style>");
         htmlBuilder.Append("</head>");
         htmlBuilder.Append("<body bgcolor='");
         htmlBuilder.Append(BackgroundColor.ToHex());
@@ -180,12 +194,22 @@ public partial class MainPage : ContentPage
                 htmlBuilder.Append("#000000");
         }
         htmlBuilder.Append("'>");
-        htmlBuilder.Append(response.Replace("\n", "<br>"));
+        htmlBuilder.Append(ResponseWithLinks(response).Replace("\n", "<br>"));
         htmlBuilder.Append("</body>");
         htmlBuilder.Append("</html>");
 
         var html = new HtmlWebViewSource();
         html.Html = htmlBuilder.ToString();
         return html;
+    }
+
+    private string ResponseWithLinks(string response)
+    {
+        foreach (var hyperlink in _dataverseAIClient.Hyperlinks)
+        {
+            response = response.Replace(hyperlink.Key, $"<a href='{hyperlink.Value}' rel='noopener noreferrer'>{hyperlink.Key}</a>");
+        }
+
+        return response;
     }
 }

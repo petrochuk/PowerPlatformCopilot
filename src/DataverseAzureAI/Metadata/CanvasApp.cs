@@ -79,8 +79,8 @@ public class CanvasAppProperties
     public int SharedGroupsCount { get; set; }
     public int SharedUsersCount { get; set; }
     public string appOpenProtocolUri { get; set; }
-    public string appOpenUri { get; set; }
-    public string appPlayUri { get; set; }
+    public Uri AppOpenUri { get; set; }
+    public Uri AppPlayUri { get; set; }
     public string appPlayEmbeddedUri { get; set; }
     public string appPlayTeamsUri { get; set; }
     public object[] authorizationReferences { get; set; }
