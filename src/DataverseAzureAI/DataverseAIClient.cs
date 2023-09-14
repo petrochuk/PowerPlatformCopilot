@@ -530,6 +530,22 @@ public partial class DataverseAIClient : IDisposable
         return usersData.SystemUsers;
     }
 
+    public async Task<List<RolePrivilege>> LoadRolePrivileges(Guid roleId)
+    {
+        var query = $"RetrieveRolePrivilegesRole(RoleId={roleId})";
+        var uri = BuildOrgDataQueryUri(query);
+        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+        var response = await httpClient.GetAsync(uri);
+        response.EnsureSuccessStatusCode();
+        var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+
+        var polePrivileges = JsonSerializer.Deserialize<RetrieveRolePrivilegesRoleResponse>(contentStream, JsonSerializerOptions);
+        if (polePrivileges == null)
+            throw new InvalidOperationException("Failed to get list of role privileges.");
+
+        return polePrivileges.RolePrivileges;
+    }
+
     public async Task<Nl2SqlResponse> CallDataverseCopilot(string queryText)
     {
         var query = $"copilot/v1.0/querystructureddata";

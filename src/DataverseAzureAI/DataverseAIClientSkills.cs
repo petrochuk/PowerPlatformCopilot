@@ -722,7 +722,7 @@ public partial class DataverseAIClient
 
     #region Roles / Permissions
     
-    [Description("List of members with particular role")]
+    [Description("List of role member")]
     public async Task<string> ListOfRoleMembers(
         [Description("Power Platform environment")]
         string environment,
@@ -795,6 +795,48 @@ public partial class DataverseAIClient
 
         // Return list of members
         return $"{role.BusinessUnit.Name}/{role.Name} role has {role.SystemUsers.Count} member(s): {string.Join(", ", role.SystemUsers.Select(u => u.FullName))}";
+    }
+
+    [Description("Count of roles privileges")]
+    public async Task<string> CountOfRolePrivileges(
+        [Description("Power Platform environment")]
+        string environment,
+        [Required, Description("Role name")]
+        string roleName,
+        [Description("Optional business unit the role belongs to")]
+        string businessUnit)
+    {
+        if (!EnsureSelectedEnvironment(environment, out var errorResponse))
+            return errorResponse;
+
+        if (string.IsNullOrWhiteSpace(roleName))
+            return "Role name is required. Ask for role name.";
+
+        // Send async requests in parallel
+        var roles = SelectedEnvironment!.Roles.Value;
+        await Task.WhenAll(roles);
+
+        if (string.IsNullOrWhiteSpace(businessUnit))
+            businessUnit = SelectedEnvironment.Properties.LinkedEnvironmentMetadata.domainName;
+
+        var role = roles.Result.FirstOrDefault(r =>
+            string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(r.BusinessUnit.Name, businessUnit, StringComparison.OrdinalIgnoreCase));
+        if (role == null)
+        {
+            role = roles.Result.FirstOrDefault(r =>
+                r.Name.Contains(roleName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(r.BusinessUnit.Name, businessUnit, StringComparison.OrdinalIgnoreCase));
+            if (role == null)
+                return $"Unable to find role {roleName} in {SelectedEnvironment.Properties.DisplayName}";
+        }
+
+        if (role.RolePrivileges == null)
+        {
+            role.RolePrivileges = await LoadRolePrivileges(role.RoleId);
+        }
+
+        return $"{role.BusinessUnit.Name}/{role.Name} role has {role.RolePrivileges.Count} privilege(s)";
     }
 
     [Description("Updates user roles inside Power Platform")]

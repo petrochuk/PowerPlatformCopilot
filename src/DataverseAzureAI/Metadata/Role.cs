@@ -38,4 +38,7 @@ public class Role
 
     [JsonPropertyName("systemuserroles_association")]
     public List<SystemUser> SystemUsers { get; set; }
+
+    [JsonIgnore]
+    public List<RolePrivilege> RolePrivileges { get; set; }
 }
