@@ -617,7 +617,7 @@ public partial class DataverseAIClient
         Microsoft.Graph.Me.SendMail.SendMailPostRequestBody body = new()
         {
             Message = message,
-            SaveToSentItems = false
+            SaveToSentItems = true
         };
         await _graphClient.Value.Me.SendMail.PostAsync(body);
         return $"Sent email message to {person.DisplayName} ({person.UserPrincipalName})";
