@@ -33,7 +33,9 @@ public partial class DataverseAIClient
         if (entityMetadataModel == null)
             return TableNotFound;
 
-        return $"Found table {tableName} with description: {entityMetadataModel.Description.UserLocalizedLabel!.Label}";
+        _hyperlinks[entityMetadataModel.DisplayOrLogicalName] = new Uri($"https://make.powerapps.com/environments/{SelectedEnvironment.Name}/entities/{entityMetadataModel.MetadataId}");
+
+        return $"Found table {entityMetadataModel.DisplayOrLogicalName} with description: {entityMetadataModel.Description.UserLocalizedLabel!.Label}";
     }
 
     [Description("Returns filtered list of tables based on specified property value")]
@@ -56,7 +58,10 @@ public partial class DataverseAIClient
         foreach (var entityMetadataModel in entityMetadataModels)
         {
             if (propertyInfo.Equals(entityMetadataModel, propertyValueFilter, _timeProvider))
+            {
                 result.Add(entityMetadataModel.DisplayOrLogicalName);
+                _hyperlinks[entityMetadataModel.DisplayOrLogicalName] = new Uri($"https://make.powerapps.com/environments/{SelectedEnvironment.Name}/entities/{entityMetadataModel.MetadataId}");
+            }
         }
 
         if (result.Count == 0)
