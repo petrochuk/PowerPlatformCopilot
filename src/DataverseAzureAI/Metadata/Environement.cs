@@ -20,6 +20,7 @@ public class Environment
     public Lazy<Task<IList<AppModule>>> AppModules { get; private set; }
     public Lazy<Task<IList<SystemUser>>> SystemUsers { get; private set; }
     public Lazy<Task<IList<Role>>> Roles { get; private set; }
+    public Lazy<Task<IList<EntityMetadataModel>>> EntityMetadataModels { get; private set; }
 
     [JsonIgnore]
     public IHttpClientFactory HttpClientFactory { get; set; }
@@ -105,7 +106,7 @@ public class Environment
         Roles = new Lazy<Task<IList<Role>>>(async () =>
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"roles?$expand=businessunitid"));
-            var httpClient = HttpClientFactory.CreateClient(nameof(DataverseAIClient));
+            var httpClient = HttpClientFactory!.CreateClient(nameof(DataverseAIClient));
             var response = await httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -114,6 +115,21 @@ public class Environment
             if (roles == null)
                 throw new InvalidOperationException("Failed to get list roles.");
             return roles.Values;
+        });
+
+        EntityMetadataModels = new Lazy<Task<IList<EntityMetadataModel>>>(async () =>
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildOrgQueryUri($"EntityDefinitions"));
+            var httpClient = HttpClientFactory!.CreateClient(nameof(DataverseAIClient));
+            var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+
+            var metadata = JsonSerializer.Deserialize<ODataContext<EntityMetadataModel>>(contentStream, DataverseAIClient.JsonSerializerOptions);
+            if (metadata == null || metadata.Values.Count <= 0)
+                throw new InvalidOperationException("No metadata was returned.");
+
+            return metadata.Values;
         });
     }
 

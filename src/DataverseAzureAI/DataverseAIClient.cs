@@ -394,29 +394,29 @@ public partial class DataverseAIClient : IDisposable
 
     #region Helpers
 
-    private EntityMetadataModel? GetEntityMetadataModel(string tableName)
+    private EntityMetadataModel? GetEntityMetadataModel(IList<EntityMetadataModel> entityMetadataModels, string tableName)
     {
         if (string.IsNullOrWhiteSpace(tableName))
             return null;
 
-        if (_entityMetadataModels == null)
+        if (entityMetadataModels == null)
             throw new InvalidOperationException("Metadata has not been loaded.");
 
         // 1. Exact match on logical name
-        var entityMetadataModel = _entityMetadataModels!.FirstOrDefault(
+        var entityMetadataModel = entityMetadataModels!.FirstOrDefault(
             em => string.Compare(em.LogicalName, tableName, StringComparison.OrdinalIgnoreCase) == 0);
         if (entityMetadataModel != null)
             return entityMetadataModel;
 
         // 2. Exact match on logical collection name
-        entityMetadataModel = _entityMetadataModels!.FirstOrDefault(
+        entityMetadataModel = entityMetadataModels!.FirstOrDefault(
             em => string.Compare(em.LogicalCollectionName, tableName, StringComparison.OrdinalIgnoreCase) == 0);
         if (entityMetadataModel != null)
             return entityMetadataModel;
 
         // 3. Exact matching without publisher prefix
         var tableNameWithoutPublisher = tableName.TrimPublisher();
-        entityMetadataModel = _entityMetadataModels!.FirstOrDefault(em =>
+        entityMetadataModel = entityMetadataModels!.FirstOrDefault(em =>
             {
                 if (string.Compare(em.LogicalName.TrimPublisher(), tableNameWithoutPublisher, StringComparison.OrdinalIgnoreCase) == 0)
                     return true;
@@ -430,7 +430,7 @@ public partial class DataverseAIClient : IDisposable
             return entityMetadataModel;
 
         // 4. Exact matching on display name
-        entityMetadataModel = _entityMetadataModels!.FirstOrDefault(em =>
+        entityMetadataModel = entityMetadataModels!.FirstOrDefault(em =>
             {
                 return em.DisplayName.LocalizedLabels.Any
                 (
@@ -441,7 +441,7 @@ public partial class DataverseAIClient : IDisposable
             return entityMetadataModel;
 
         // 5. Exact matching on display collection name
-        entityMetadataModel = _entityMetadataModels!.FirstOrDefault(em =>
+        entityMetadataModel = entityMetadataModels!.FirstOrDefault(em =>
             {
                 return em.DisplayCollectionName.LocalizedLabels.Any
                 (

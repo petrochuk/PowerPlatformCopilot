@@ -17,64 +17,80 @@ public partial class DataverseAIClient
 {
     #region Assistant skill functions for Tables
 
-    [Description("Find Dataverse table or entity by exact or partial name")]
-    public Task<string> FindTableByName(
+    [Description("Returns description for Dataverse table or entity")]
+    public async Task<string> GetTableDescription(
+        [Description("Power Platform environment")]
+        string environment,
         [Description("Exact or partial name of Dataverse table or entity")]
         string tableName)
     {
-        var entityMetadataModel = GetEntityMetadataModel(tableName);
-        if (entityMetadataModel == null)
-            return Task.FromResult(TableNotFound);
+        if (!EnsureSelectedEnvironment(environment, out var errorResponse))
+            return errorResponse;
 
-        return Task.FromResult($"Found table {tableName} with description: {entityMetadataModel.Description.UserLocalizedLabel!.Label}");
+        var entityMetadataModels = await SelectedEnvironment!.EntityMetadataModels.Value.ConfigureAwait(false);
+
+        var entityMetadataModel = GetEntityMetadataModel(entityMetadataModels, tableName);
+        if (entityMetadataModel == null)
+            return TableNotFound;
+
+        return $"Found table {tableName} with description: {entityMetadataModel.Description.UserLocalizedLabel!.Label}";
     }
 
     [Description("Returns filtered list of tables based on specified property value")]
-    public Task<string> ListOfTablesByPropertyValue(
+    public async Task<string> ListOfTablesByPropertyValue(
+        [Description("Power Platform environment")]
+        string environment,
         [Description("Property name")]
         string propertyName,
         [Description("Filter by property value")]
         string propertyValueFilter)
     {
+        if (!EnsureSelectedEnvironment(environment, out var errorResponse))
+            return errorResponse;
+
         if (string.IsNullOrWhiteSpace(propertyName) || !EntityMetadataModel.Properties.TryGetValue(propertyName, out var propertyInfo))
-            return Task.FromResult(PropertyNotFound);
+            return PropertyNotFound;
 
-        if (_entityMetadataModels == null)
-            throw new InvalidOperationException("Metadata has not been loaded.");
-
+        var entityMetadataModels = await SelectedEnvironment!.EntityMetadataModels.Value.ConfigureAwait(false);
         var result = new List<string>();
-        foreach (var entityMetadataModel in _entityMetadataModels)
+        foreach (var entityMetadataModel in entityMetadataModels)
         {
             if (propertyInfo.Equals(entityMetadataModel, propertyValueFilter, _timeProvider))
                 result.Add(entityMetadataModel.DisplayOrLogicalName);
         }
 
         if (result.Count == 0)
-            return Task.FromResult("Not found any tables matching specified filter");
+            return "Not found any tables matching specified filter";
 
-        return Task.FromResult($"Found following table(s) {string.Join(", ", result)}");
+        return $"Found following table(s) {string.Join(", ", result)}";
     }
 
     [Description("Returns property value for specified table")]
-    public Task<string> GetTablePropertyValue(
+    public async Task<string> GetTablePropertyValue(
+        [Description("Power Platform environment")]
+        string environment,
         [Description("Exact or partial name of Dataverse table")]
         string tableName,
         [Description("Property name")]
         string propertyName)
     {
-        var entityMetadataModel = GetEntityMetadataModel(tableName);
+        if (!EnsureSelectedEnvironment(environment, out var errorResponse))
+            return errorResponse;
+
+        var entityMetadataModels = await SelectedEnvironment!.EntityMetadataModels.Value.ConfigureAwait(false);
+        var entityMetadataModel = GetEntityMetadataModel(entityMetadataModels, tableName);
         if (entityMetadataModel == null)
-            return Task.FromResult(TableNotFound);
+            return TableNotFound;
 
         if (string.IsNullOrWhiteSpace(propertyName))
-            return Task.FromResult(PropertyNotFound);
+            return PropertyNotFound;
 
         if (EntityMetadataModel.Properties.TryGetValue(propertyName, out var property))
         {
-            return Task.FromResult(property.GetValue(entityMetadataModel, FullName, _timeProvider));
+            return property.GetValue(entityMetadataModel, FullName, _timeProvider);
         }
 
-        return Task.FromResult(PropertyNotFound);
+        return PropertyNotFound;
     }
 
     #endregion
