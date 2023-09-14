@@ -721,7 +721,34 @@ public partial class DataverseAIClient
     #endregion
 
     #region Roles / Permissions
-    
+
+    [Description("List of roles")]
+    public async Task<string> ListOfRoles(
+        [Description("Power Platform environment")]
+        string environment)
+    {
+        if (!EnsureSelectedEnvironment(environment, out var errorResponse))
+            return errorResponse;
+
+        // Send async requests in parallel
+        var roles = SelectedEnvironment!.Roles.Value;
+        await Task.WhenAll(roles);
+
+        int count = 0;
+        foreach(var role in roles.Result)
+        {
+            _hyperlinks[role.Name] = new Uri($"https://admin.powerplatform.microsoft.com/environments/{SelectedEnvironment.Properties.LinkedEnvironmentMetadata.resourceId}/securityroles/{role.RoleId}/members");
+            count++;
+            if (MaxReturnedListCount <= count)
+                break;
+        }
+
+        if (roles.Result.Count <= MaxReturnedListCount)
+            return $"There are {roles.Result.Count} role(s): {string.Join(", ", roles.Result.Select(r => r.Name))}";
+
+        return $"There are {roles.Result.Count} role(s) first {MaxReturnedListCount}: {string.Join(", ", roles.Result.Take(MaxReturnedListCount).Select(r => r.Name))}";
+    }
+
     [Description("List of role member")]
     public async Task<string> ListOfRoleMembers(
         [Description("Power Platform environment")]
@@ -797,14 +824,18 @@ public partial class DataverseAIClient
         return $"{role.BusinessUnit.Name}/{role.Name} role has {role.SystemUsers.Count} member(s): {string.Join(", ", role.SystemUsers.Select(u => u.FullName))}";
     }
 
-    [Description("Count of roles privileges")]
-    public async Task<string> CountOfRolePrivileges(
+    [Description("Check if role has specific privilege")]
+    public async Task<string> CheckRolePrivilege(
         [Description("Power Platform environment")]
         string environment,
         [Required, Description("Role name")]
         string roleName,
         [Description("Optional business unit the role belongs to")]
-        string businessUnit)
+        string businessUnit,
+        [Required, Description("One of actions: Create, Read, Write, Delete, Append, AppendTo, Assign, Share")]
+        string actionVerb,
+        [Required, Description("Table or app name")]
+        string objectName)
     {
         if (!EnsureSelectedEnvironment(environment, out var errorResponse))
             return errorResponse;
@@ -836,7 +867,14 @@ public partial class DataverseAIClient
             role.RolePrivileges = await LoadRolePrivileges(role.RoleId);
         }
 
-        return $"{role.BusinessUnit.Name}/{role.Name} role has {role.RolePrivileges.Count} privilege(s)";
+        var privilege = $"prv{actionVerb}{objectName}";
+        foreach (var rolePrivilege in role.RolePrivileges)
+        {
+            if (string.Equals(rolePrivilege.PrivilegeName, privilege, StringComparison.OrdinalIgnoreCase))
+                return $"{role.BusinessUnit.Name}/{role.Name} role has {rolePrivilege.PrivilegeName} privilege";
+        }
+
+        return $"{role.BusinessUnit.Name}/{role.Name} doesn't have right privilege";
     }
 
     [Description("Updates user roles inside Power Platform")]

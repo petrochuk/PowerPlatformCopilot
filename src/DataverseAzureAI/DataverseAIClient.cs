@@ -346,6 +346,8 @@ public partial class DataverseAIClient : IDisposable
         get => _hyperlinks.AsReadOnly();
     }
 
+    public int MaxReturnedListCount { get; set; } = 20;
+
     #endregion
 
     #region Chat

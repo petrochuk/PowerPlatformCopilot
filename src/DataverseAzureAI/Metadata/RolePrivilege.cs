@@ -14,3 +14,15 @@ public class RetrieveRolePrivilegesRoleResponse
 {
     public List<RolePrivilege> RolePrivileges { get; set; }
 }
+
+public enum PrivilegeAction
+{
+    Create,
+    Read,
+    Write,
+    Delete,
+    Append,
+    AppendTo,
+    Assign,
+    Share
+}
