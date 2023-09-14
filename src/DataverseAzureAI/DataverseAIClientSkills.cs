@@ -315,18 +315,25 @@ public partial class DataverseAIClient
         var responseText = new StringBuilder();
         foreach (var result in copilotResponse.QueryResult.Results)
         {
-            if (result.RecordLinks != null && result.RecordLinks.Count > 0)
-            {
-                responseText.Append($"<a href='{result.RecordLinks[0]}'>{result.name}</a>");
-            }
-            else
+            if (!string.IsNullOrWhiteSpace(result.name))
             {
                 responseText.Append($"{result.name}");
+                if (result.RecordLinks != null && result.RecordLinks.Count > 0)
+                    _hyperlinks[result.name] = new Uri(result.RecordLinks[0]);
             }
+            else if (!string.IsNullOrWhiteSpace(result.fullname))
+            {
+                responseText.Append($"{result.fullname}");
+                if (result.RecordLinks != null && result.RecordLinks.Count > 0)
+                    _hyperlinks[result.fullname] = new Uri(result.RecordLinks[0]);
+            }
+            else
+                continue;
+
             responseText.AppendLine(",");
         }
 
-        return responseText.ToString();
+        return "Here is the list:"+ responseText.ToString();
     }
     
     [Description("Returns all solutions or filtered list of installed/imported based on specified property value and optional user")]
