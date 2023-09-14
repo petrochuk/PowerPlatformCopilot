@@ -765,6 +765,8 @@ public partial class DataverseAIClient
             role.SystemUsers = await LoadRoleUsers(role.RoleId);
         }
 
+        _hyperlinks[role.Name] = new Uri($"https://admin.powerplatform.microsoft.com/environments/{SelectedEnvironment.Properties.LinkedEnvironmentMetadata.resourceId}/securityroles/{role.RoleId}/members");
+
         if (person != null && person.Result != null)
         {
             // First pass, match by domainname (email)
@@ -922,7 +924,7 @@ public partial class DataverseAIClient
     }
 
     [Description("Returns list of Azure Active Directory security groups person member of by calling Microsoft Graph API")]
-    public async Task<string> ListSecurityGroups(
+    public async Task<string> ListActiveDirectorySecurityGroups(
         [Required, Description("Person's first name, last name or a email")]
         string personName)
     {
