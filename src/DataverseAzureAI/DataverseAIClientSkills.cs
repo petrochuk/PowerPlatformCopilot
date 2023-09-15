@@ -824,6 +824,36 @@ public partial class DataverseAIClient
         return $"{role.BusinessUnit.Name}/{role.Name} role has {role.SystemUsers.Count} member(s): {string.Join(", ", role.SystemUsers.Select(u => u.FullName))}";
     }
 
+
+    [Description("Returns list of roles assigned to a user")]
+    public async Task<string> ListOfUserRoles(
+        [Description("Power Platform environment")]
+        string environment,
+        [Required, Description("Person's first name, or last name, or full name, or a email")]
+        string personName)
+    {
+        if (!EnsureSelectedEnvironment(environment, out var errorResponse))
+            return errorResponse;
+
+        if (string.IsNullOrWhiteSpace(personName))
+            return "Person or user name is required. Ask for the name.";
+
+        // Send async requests in parallel
+        var person = FindPersonViaGraph(personName);
+        await Task.WhenAll(person);
+        if (person.Result == null && !string.IsNullOrWhiteSpace(personName))
+            return $"Unable to find {personName}";
+
+        var roles = await RetrieveAadUserRoles(new Guid(person.Result.Id));
+
+        foreach (var role in roles)
+        {
+            _hyperlinks[role.Name] = new Uri($"https://admin.powerplatform.microsoft.com/environments/{SelectedEnvironment.Properties.LinkedEnvironmentMetadata.resourceId}/securityroles/{role.RoleId}/members");
+        }
+
+        return $"{person.Result.DisplayName} has {roles.Count} role(s): {string.Join(", ", roles.Select(r => r.Name))}";
+    }
+
     [Description("Check if role has specific privilege")]
     public async Task<string> CheckRolePrivilege(
         [Description("Power Platform environment")]

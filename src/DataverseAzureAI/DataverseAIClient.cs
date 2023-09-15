@@ -532,6 +532,22 @@ public partial class DataverseAIClient : IDisposable
         return usersData.SystemUsers;
     }
 
+    public async Task<IList<Role>> RetrieveAadUserRoles(Guid aadObjectId)
+    {
+        var query = $"RetrieveAadUserRoles(DirectoryObjectId={aadObjectId})";
+        var uri = BuildOrgDataQueryUri(query);
+        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+        var response = await httpClient.GetAsync(uri);
+        response.EnsureSuccessStatusCode();
+        var contentStream = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+        var roles = JsonSerializer.Deserialize<ODataContext<Role>>(contentStream, JsonSerializerOptions);
+        if (roles == null)
+            throw new InvalidOperationException("Failed to get list of user roles.");
+
+        return roles.Values;
+    }
+
     public async Task<List<RolePrivilege>> LoadRolePrivileges(Guid roleId)
     {
         var query = $"RetrieveRolePrivilegesRole(RoleId={roleId})";
