@@ -845,6 +845,8 @@ public partial class DataverseAIClient
             return $"Unable to find {personName}";
 
         var roles = await RetrieveAadUserRoles(new Guid(person.Result.Id));
+        if (roles.Count == 0)
+            return $"{person.Result.DisplayName} has no roles assigned.";
 
         foreach (var role in roles)
         {
