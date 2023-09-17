@@ -751,7 +751,7 @@ public partial class DataverseAIClient
         return $"There are {roles.Result.Count} role(s) first {MaxReturnedListCount}: {string.Join(", ", roles.Result.Take(MaxReturnedListCount).Select(r => r.Name))}";
     }
 
-    [Description("List of role member")]
+    [Description("List of role members")]
     public async Task<string> ListOfRoleMembers(
         [Description("Power Platform environment")]
         string environment,

@@ -19,34 +19,20 @@ It can be used as a starting point for building your own Copilot/AI Assistant fo
 - [List available solutions and whats inside them](src/docs/solution-components.md)
 - [Share canvas apps](src/docs/share-canvas-apps.md)
 - [Switching between Environments](src/docs/switching-environments.md)
+- [Listing of roles](src/docs/roles.md)
 
 [Watch All Short Demos](src/docs/Demos.md)
+
+## Screenshots
+
+![List roles](src/docs/assets/images/roles-from-systray.jpg)
+[Listing of roles](src/docs/roles.md)
 
 ## Contributing
 
 This project is welcoming contributions. If you have any questions, feel free to start a [discussion](https://github.com/petrochuk/PowerPlatformCopilot/discussions). I can even give temporary OpenApiKey for testing to people who contribute.
 
-## Copilot/AI Assistant Skills implemented as AI Functons
-
-The following skills are implemented as Azure AI Functions in [DataverseAIClientSkills.cs](src/DataverseAzureAI/DataverseAIClientSkills.cs):
-
-| Skill | Description |
-| ----- | ----------- |
-| FindTableByName | Find Dataverse table or entity by exact or partial name |
-| ListOfTablesByPropertyValue | Returns filtered list of tables based on specified property value |
-| GetTablePropertyValue | Returns property value for specified table |
-| ListOfModelDrivenAppsByPropertyValue | Returns filtered list of Model-driven PowerApps based on specified property value |
-| FindCanvasApp | Finds a canvas app based on specified property value
-| ListOfCanvasAppsByPropertyValue | Returns filtered list of canvas PowerApps based on specified property value |
-| GetCanvasAppPropertyValue | Returns property value for a canvas app |
-| ListOSolutionsByPropertyValue | Returns filtered list of Dataverse solutions based on specified property value and optional user |
-| ListOSolutionComponents | Returns list of components inside Dataverse solutions. It can filter on component type, name or other properties |
-| GetSolutionPropertyValue | Returns property value for specified Dataverse solution |
-| SendEmailOrShareLinkWithSomeone | Sends an email or shares a link to an item, record or anything else inside PowerPlatform including but not limited to app, solution, table, component |
-| SaveToFileSystem | Save to file system: text output, apps, solutions, lists or any other Power Platform component |
-| CreateItemInsidePowerPlatform | Creates new items, records or anything else inside PowerPlatform including but not limited to apps, solutions, tables, users, components |
-| UpdateUserPermission | Updates user permission inside Power Platform |
-| ShareCanvasApp | Share canvas app inside Power Platform |
+[Copilot/AI Assistant Skills implemented as AI Functons](ListOfSkills.md)
 
 ## Running the project
 
