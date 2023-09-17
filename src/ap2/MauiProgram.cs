@@ -46,7 +46,7 @@ public static class MauiProgram
         client.Run();
 
         _trayWindow = new NativeWindow(Assembly.GetExecutingAssembly().GetName().Name, NotificationWndProc);
-        ap2.Native.Shell.AddNotifyIcon("ProDev Copilot", _iconId, _trayWindow.Handle);
+        ap2.Native.Shell.AddNotifyIcon("Power Platform Copilot", _iconId, _trayWindow.Handle);
 
         NativeMethods.MSG msg;
         while (NativeMethods.GetMessage(out msg, 0, 0, 0) > 0)

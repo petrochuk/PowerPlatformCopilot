@@ -8,6 +8,11 @@ public class RolePrivilege
     public string PrivilegeName { get; set; }
     public string RecordFilterId { get; set; }
     public string RecordFilterUniqueName { get; set; }
+
+    override public string ToString()
+    {
+        return $"{PrivilegeName}";
+    }
 }
 
 public class RetrieveRolePrivilegesRoleResponse
