@@ -92,7 +92,7 @@ public partial class DataverseAIClient
 
         if (EntityMetadataModel.Properties.TryGetValue(propertyName, out var property))
         {
-            return property.GetValue(entityMetadataModel, FullName, _timeProvider);
+            return $"{entityMetadataModel.DisplayOrLogicalName} table has {propertyName} = {property.GetValue(entityMetadataModel, FullName, _timeProvider)}";
         }
 
         return PropertyNotFound;
@@ -610,7 +610,9 @@ public partial class DataverseAIClient
             },
             ToRecipients = new List<Recipient>
             {
-                new Recipient { EmailAddress = new EmailAddress { Address = person.UserPrincipalName } },
+                new Recipient { EmailAddress = new EmailAddress {
+                    Address = person.UserPrincipalName 
+                } },
             }
         };
 
@@ -899,14 +901,19 @@ public partial class DataverseAIClient
             role.RolePrivileges = await LoadRolePrivileges(role.RoleId);
         }
 
-        var privilege = $"prv{actionVerb}{objectName}";
+        var entityMetadataModels = await SelectedEnvironment!.EntityMetadataModels.Value.ConfigureAwait(false);
+        var entityMetadataModel = GetEntityMetadataModel(entityMetadataModels, objectName);
+        if (entityMetadataModel == null)
+            return TableNotFound;
+
+        var privilege = $"prv{actionVerb}{entityMetadataModel.LogicalName}";
         foreach (var rolePrivilege in role.RolePrivileges)
         {
             if (string.Equals(rolePrivilege.PrivilegeName, privilege, StringComparison.OrdinalIgnoreCase))
                 return $"{role.BusinessUnit.Name}/{role.Name} role has {rolePrivilege.PrivilegeName} privilege";
         }
 
-        return $"{role.BusinessUnit.Name}/{role.Name} doesn't have right privilege";
+        return $"{role.BusinessUnit.Name}/{role.Name} doesn't have {actionVerb} access to {objectName}";
     }
 
     [Description("Updates user roles inside Power Platform")]
@@ -974,7 +981,7 @@ public partial class DataverseAIClient
 
     #region Share
 
-    [Description("Share canvas app inside Power Platform")]
+    [Description("Share canvas app by giving permission")]
     public async Task<string> ShareCanvasApp(
         [Description("Power Platform environment")]
         string environment,
@@ -1036,6 +1043,8 @@ public partial class DataverseAIClient
             request.Content = new StringContent(JsonSerializer.Serialize(updatePermissionRequest, JsonSerializerOptions), Encoding.UTF8, "application/json");
             var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
             var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                continue; // App already shared
             response.EnsureSuccessStatusCode();
         }
 

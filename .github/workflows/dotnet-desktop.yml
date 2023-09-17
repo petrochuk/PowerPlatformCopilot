@@ -33,11 +33,13 @@ jobs:
       with:
         fetch-depth: 0
 
-    # Install the .NET Core workload
     - name: Install .NET 8
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 8.0.x
+
+    - name: Install MAUI workload
+      run: dotnet workload install maui-windows --skip-sign-check --source https://api.nuget.org/v3/index.json
 
     - name: Restore workloads
       run: dotnet workload restore $env:Solution_Name

@@ -21,6 +21,7 @@
         <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
         <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
         <WindowsPackageType>None</WindowsPackageType>
+        <UseRidGraph>true</UseRidGraph>
         
 		<!-- Display name -->
 		<ApplicationTitle>ap2</ApplicationTitle>
