@@ -36,6 +36,12 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
+    - name: Install MAUI workload
+      run: dotnet workload install maui-windows --skip-sign-check --source https://api.nuget.org/v3/index.json
+
+    - name: Restore workloads
+      run: dotnet workload restore $env:Solution_Name
+
     - name: Restore dependencies
       run: dotnet restore $env:Solution_Name
 
@@ -58,7 +64,14 @@ jobs:
         name: ConsoleTestApp
         path: src/ConsoleTestApp/bin/Release/net8.0/publish
         if-no-files-found: error
-        
+
+    - name: Upload ap2 Artifacts
+      uses: actions/upload-artifact@v3
+      with: 
+        name: ConsoleTestApp
+        path: src/ap2/bin/${{ matrix.configuration }}/net8.0-windows10.0.19041.0/win10-x64/publish
+        if-no-files-found: error
+
     - name: Creates a release and uploads attachments
       run: | 
         $pwd
