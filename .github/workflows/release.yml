@@ -46,7 +46,7 @@ jobs:
       run: dotnet restore $env:Solution_Name
 
     - name: Build
-      run: dotnet build --no-restore $env:Solution_Name -c Release -f net8.0-windows10.0.19041.0 -r win10-x64 --no-restore
+      run: dotnet build --no-restore $env:Solution_Name -c Release -f net8.0-windows10.0.19041.0 --no-restore
 
     - name: Publish
       run: dotnet publish $env:Solution_Name -c Release -f net8.0-windows10.0.19041.0 -r win10-x64 --no-restore
