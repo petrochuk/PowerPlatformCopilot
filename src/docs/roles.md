@@ -6,4 +6,4 @@ This example also demonstrates a way to interact with Power Platform Copilot fro
 
 Click Play:
 
-![Table Properties](assets/images/roles.gif)
+![Table Properties](assets/images/Roles.gif)

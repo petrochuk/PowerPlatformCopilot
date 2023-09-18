@@ -26,6 +26,7 @@ It can be used as a starting point for building your own Copilot/AI Assistant fo
 ## Screenshots
 
 ![List roles](src/docs/assets/images/roles-from-systray.jpg)
+
 [Listing of roles](src/docs/roles.md)
 
 ## Contributing
