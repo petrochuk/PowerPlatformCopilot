@@ -1088,4 +1088,31 @@ public partial class DataverseAIClient
     }
 
     #endregion
+
+    #region users
+    [Description("User access diagnostics")]
+    public async Task<string> UserDiagnostic(
+        [Description("Power Platform environment")]
+        string environment,
+        [Description("UPN")]
+        string upn)
+    {
+        if (!EnsureSelectedEnvironment(environment, out var errorResponse))
+            return errorResponse;
+
+        // Send async requests in parallel
+        var systemUser = await SelectedEnvironment!.GetSystemUser(upn);
+        if (systemUser == null)
+            return $"Unable to find {upn} in {SelectedEnvironment.Properties.DisplayName}";
+
+        var userDiagnosticsApiUrl = new Uri($"https://admin.powerplatform.microsoft.com/environments/{SelectedEnvironment.Properties.LinkedEnvironmentMetadata.resourceId}/systemUser/{systemUser.SystemUserId}/tryapplyuser?api-version=2022-03-01-preview");
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, userDiagnosticsApiUrl);
+        request.Headers.Add("Content-Type", "application/json");
+        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+        var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+        var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        return responseContent;
+    }
+    #endregion
 }
