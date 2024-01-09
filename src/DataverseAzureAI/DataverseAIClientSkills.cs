@@ -7,6 +7,7 @@ using Microsoft.Graph.Models;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -1090,29 +1091,63 @@ public partial class DataverseAIClient
     #endregion
 
     #region users
-    [Description("User access diagnostics")]
-    public async Task<string> UserDiagnostic(
+    [Description("Check if user exists in environment")]
+    public async Task<string> CheckUserState(
         [Description("Power Platform environment")]
         string environment,
-        [Description("UPN")]
+        [Required, Description("UPN (User Principal Name)")]
         string upn)
     {
         if (!EnsureSelectedEnvironment(environment, out var errorResponse))
             return errorResponse;
+
+        if (string.IsNullOrWhiteSpace(upn))
+            return "UPN is required. Ask for users UPN (User Principal Name).";
+
+        // Send async requests in parallel
+        var systemUser = await SelectedEnvironment!.GetSystemUser(upn);
+        if (systemUser == null)
+            return $"Unable to find {upn} in {SelectedEnvironment.Properties.DisplayName}";
+        else {
+            var licensedToken = systemUser.islicensed ? "licensed" : "not licensed";
+            var disabledToken = systemUser.isdisabled ? "disabled" : "enabled";
+            return $"Users {upn} exists in {SelectedEnvironment.Properties.DisplayName} with Azure AD object id {systemUser.azureactivedirectoryobjectid}. The users is {disabledToken} and {licensedToken}";
+        }
+    }
+
+    [Description("User access diagnostics")]
+    public async Task<string> UserDiagnostic(
+        [Description("Power Platform environment")]
+        string environment,
+        [Required, Description("UPN")]
+        string upn)
+    {
+        if (!EnsureSelectedEnvironment(environment, out var errorResponse))
+            return errorResponse;
+
+        if (string.IsNullOrWhiteSpace(upn))
+            return "UPN is required. Ask for UPN to be diagnosed.";
 
         // Send async requests in parallel
         var systemUser = await SelectedEnvironment!.GetSystemUser(upn);
         if (systemUser == null)
             return $"Unable to find {upn} in {SelectedEnvironment.Properties.DisplayName}";
 
-        var userDiagnosticsApiUrl = new Uri($"https://admin.powerplatform.microsoft.com/environments/{SelectedEnvironment.Properties.LinkedEnvironmentMetadata.resourceId}/systemUser/{systemUser.SystemUserId}/tryapplyuser?api-version=2022-03-01-preview");
+        try
+        {
+            var userDiagnosticsApiUrl = new Uri($"https://admin.powerplatform.microsoft.com/environments/{SelectedEnvironment.Properties.LinkedEnvironmentMetadata.resourceId}/systemUser/{systemUser.azureactivedirectoryobjectid}/tryApplyUser?api-version=2022-03-01-preview");
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, userDiagnosticsApiUrl);
-        request.Headers.Add("Content-Type", "application/json");
-        var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
-        var response = await httpClient.SendAsync(request).ConfigureAwait(false);
-        var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-        return responseContent;
+            using var request = new HttpRequestMessage(HttpMethod.Post, userDiagnosticsApiUrl);
+            request.Content = new StringContent("", Encoding.UTF8, "application/json");
+            var httpClient = _httpClientFactory.CreateClient(nameof(DataverseAIClient));
+            var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+            var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return responseContent;
+        }
+        catch (Exception ex)
+        {
+            return ex.ToString();
+        }
     }
     #endregion
 }
